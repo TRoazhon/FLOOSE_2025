@@ -1,0 +1,4041 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floose - Gestion de Budget Professionnel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-widgets.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2"></script>
+    <style>
+        /* Legacy variable mapping for backward compatibility */
+        :root {
+            --primary-green: var(--color-primary);
+            --primary-green-dark: var(--color-primary-hover);
+            --primary-green-light: #E8937A;
+            --primary-black: var(--color-slate-900);
+            --secondary-black: var(--color-slate-800);
+            --text-black: var(--color-text-primary);
+            --white: var(--color-surface);
+            --gray-50: var(--color-slate-50);
+            --gray-100: var(--color-slate-100);
+            --gray-200: var(--color-slate-200);
+            --gray-300: var(--color-slate-300);
+            --gray-500: var(--color-slate-500);
+            --gray-600: var(--color-slate-600);
+            --gray-800: var(--color-slate-800);
+            --border: var(--color-border);
+            --success: var(--color-success);
+            --danger: var(--color-danger);
+            --warning: var(--color-warning);
+            --shadow: var(--shadow-sm);
+            --shadow-lg: var(--shadow-lg);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--gray-50);
+            color: var(--text-black);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Header & Navigation */
+        .header {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            height: 64px;
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary-black);
+            text-decoration: none;
+        }
+        
+        .logo i {
+            color: var(--primary-green);
+        }
+        
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            list-style: none;
+        }
+        
+        .nav-item {
+            position: relative;
+        }
+        
+        .nav-link {
+            color: var(--gray-600);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            color: var(--primary-green);
+            background: rgba(16, 185, 129, 0.1);
+        }
+        
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary-green);
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        /* Main Content */
+        .main-content {
+            margin-top: 64px;
+            min-height: calc(100vh - 64px);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+        
+        .page-header {
+            margin-bottom: 32px;
+        }
+        
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-black);
+            margin-bottom: 8px;
+        }
+        
+        .page-subtitle {
+            font-size: 16px;
+            color: var(--gray-500);
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            transition: all 0.2s ease;
+        }
+        
+        .stat-card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .stat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gray-500);
+        }
+        
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--white);
+        }
+        
+        .stat-icon.green {
+            background: var(--primary-green);
+        }
+        
+        .stat-icon.black {
+            background: var(--primary-black);
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-black);
+            margin-bottom: 8px;
+        }
+        
+        .stat-change {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .stat-change.positive {
+            color: var(--success);
+        }
+        
+        .stat-change.negative {
+            color: var(--danger);
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        
+        .card-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: between;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-black);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .card-title i {
+            color: var(--primary-green);
+        }
+        
+        .card-body {
+            padding: 24px;
+        }
+        
+        .card-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 12px;
+        }
+        
+        /* Forms */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-black);
+            margin-bottom: 8px;
+        }
+        
+        .form-input, .form-select {
+            height: 44px;
+            padding: 0 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            background: var(--white);
+            color: var(--text-black);
+            transition: border-color 0.2s ease;
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        
+        /* Buttons */
+        .btn {
+            height: 44px;
+            padding: 0 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        
+        .btn-primary {
+            background: var(--primary-green);
+            color: var(--white);
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-green-dark);
+        }
+        
+        .btn-secondary {
+            background: var(--gray-100);
+            color: var(--gray-600);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--gray-200);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            color: var(--primary-green);
+            border: 1px solid var(--primary-green);
+        }
+        
+        .btn-outline:hover {
+            background: var(--primary-green);
+            color: var(--white);
+        }
+        
+        .btn-sm {
+            height: 36px;
+            padding: 0 16px;
+            font-size: 13px;
+        }
+        
+        /* Project Grid */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px;
+        }
+        
+        .project-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .project-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+            border-color: var(--primary-green);
+        }
+        
+        .project-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .project-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-black);
+        }
+        
+        .project-category {
+            background: var(--gray-100);
+            color: var(--gray-600);
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .project-budget {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        
+        .budget-spent {
+            color: var(--gray-500);
+        }
+        
+        .budget-total {
+            font-weight: 600;
+            color: var(--text-black);
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--gray-200);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--primary-green);
+            transition: width 0.3s ease;
+        }
+        
+        .progress-fill.warning {
+            background: var(--warning);
+        }
+        
+        .progress-fill.danger {
+            background: var(--danger);
+        }
+        
+        /* Account Cards */
+        .accounts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .account-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transition: all 0.2s ease;
+        }
+        
+        .account-card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .account-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .account-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-black);
+        }
+        
+        .account-bank {
+            background: var(--primary-green);
+            color: var(--white);
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .account-balance {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .balance-positive {
+            color: var(--primary-green);
+        }
+        
+        .balance-negative {
+            color: var(--danger);
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: var(--white);
+            border-radius: 16px;
+            max-width: 900px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            position: relative;
+            animation: modalShow 0.3s ease-out;
+        }
+        
+        @keyframes modalShow {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-black);
+            margin: 0;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--gray-500);
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        
+        .modal-close:hover {
+            background: var(--gray-100);
+            color: var(--text-black);
+        }
+        
+        .modal-body {
+            padding: 24px;
+        }
+        
+        /* Page Content */
+        .page-content {
+            display: none;
+        }
+        
+        .page-content.active {
+            display: block;
+        }
+        
+        /* Analytics Page Styles */
+        .kpi-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .kpi-content {
+            flex: 1;
+        }
+
+        .kpi-label {
+            font-size: 14px;
+            color: var(--gray-500);
+            margin-bottom: 4px;
+        }
+
+        .kpi-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-black);
+            margin-bottom: 8px;
+        }
+
+        .kpi-subtitle {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .kpi-progress {
+            width: 100%;
+            height: 4px;
+            background: var(--gray-200);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .kpi-sparkline {
+            margin-top: 8px;
+        }
+
+        /* Alert Styles */
+        .alert {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+        }
+
+        .alert:hover {
+            transform: translateX(4px);
+        }
+
+        .alert-warning {
+            background: #fef3cd;
+            border-left-color: var(--warning);
+        }
+
+        .alert-info {
+            background: #cff4fc;
+            border-left-color: #0dcaf0;
+        }
+
+        .alert-success {
+            background: #d1e7dd;
+            border-left-color: var(--success);
+        }
+
+        .alert-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+
+        .alert-warning .alert-icon {
+            background: var(--warning);
+            color: var(--white);
+        }
+
+        .alert-info .alert-icon {
+            background: #0dcaf0;
+            color: var(--white);
+        }
+
+        .alert-success .alert-icon {
+            background: var(--success);
+            color: var(--white);
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+            color: var(--text-black);
+        }
+
+        .alert-message {
+            font-size: 13px;
+            color: var(--gray-600);
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+
+        .alert-time {
+            font-size: 11px;
+            color: var(--gray-500);
+        }
+
+        /* Badge Styles */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-info {
+            background: #e7f1ff;
+            color: #0d6efd;
+        }
+
+        /* Form Select */
+        .form-select {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--white);
+            color: var(--text-black);
+            font-size: 14px;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary-green);
+        }
+
+        /* Page Actions */
+        .page-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-menu {
+                display: none;
+            }
+            
+            .container {
+                padding: 16px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--gray-500);
+        }
+        
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: var(--gray-300);
+        }
+        
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--gray-600);
+        }
+        
+        /* Visualization Overlay */
+        .visualization-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            backdrop-filter: blur(8px);
+        }
+        
+        .visualization-overlay.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: overlayFadeIn 0.4s ease-out;
+        }
+        
+        @keyframes overlayFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .overlay-content {
+            background: var(--white);
+            border-radius: 20px;
+            width: 95%;
+            max-width: 1400px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: overlaySlideUp 0.4s ease-out;
+        }
+        
+        @keyframes overlaySlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .overlay-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-dark) 100%);
+            color: var(--white);
+            border-radius: 20px 20px 0 0;
+        }
+        
+        .overlay-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .overlay-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            color: var(--white);
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s ease;
+        }
+        
+        .overlay-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+        
+        .overlay-body {
+            padding: 32px;
+        }
+        
+        .visualization-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+        }
+        
+        .viz-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            animation: cardSlideIn 0.6s ease-out forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .viz-card:nth-child(1) { animation-delay: 0.1s; }
+        .viz-card:nth-child(2) { animation-delay: 0.2s; }
+        .viz-card:nth-child(3) { animation-delay: 0.3s; }
+        .viz-card:nth-child(4) { animation-delay: 0.4s; }
+        .viz-card:nth-child(5) { animation-delay: 0.5s; }
+        
+        @keyframes cardSlideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .viz-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+        }
+        
+        .viz-card.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .viz-card h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-black);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .real-time-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: var(--gray-50);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-item:hover {
+            background: var(--gray-100);
+            transform: translateX(4px);
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .stat-icon.green {
+            background: var(--primary-green);
+            color: var(--white);
+        }
+        
+        .stat-icon.red {
+            background: var(--danger);
+            color: var(--white);
+        }
+        
+        .stat-icon.blue {
+            background: #3b82f6;
+            color: var(--white);
+        }
+        
+        .stat-details .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-black);
+            margin-bottom: 4px;
+        }
+        
+        .stat-details .stat-label {
+            font-size: 14px;
+            color: var(--gray-500);
+        }
+        
+        /* Timeline */
+        .timeline-container {
+            position: relative;
+            overflow-x: auto;
+            padding: 20px 0;
+        }
+        
+        .timeline {
+            display: flex;
+            gap: 24px;
+            min-width: min-content;
+            position: relative;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 24px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--border);
+            z-index: 1;
+        }
+        
+        .timeline-item {
+            min-width: 200px;
+            position: relative;
+            opacity: 0;
+            animation: timelineItemSlide 0.6s ease-out forwards;
+        }
+        
+        @keyframes timelineItemSlide {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .timeline-marker {
+            width: 16px;
+            height: 16px;
+            background: var(--primary-green);
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            position: relative;
+            z-index: 2;
+            border: 3px solid var(--white);
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+        
+        .timeline-content {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+        
+        .timeline-content:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .timeline-content h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-black);
+            margin-bottom: 8px;
+        }
+        
+        .timeline-content p {
+            font-size: 14px;
+            color: var(--gray-500);
+            margin-bottom: 12px;
+        }
+        
+        .timeline-progress {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .timeline-progress-bar {
+            flex: 1;
+            height: 6px;
+            background: var(--gray-200);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .timeline-progress-fill {
+            height: 100%;
+            background: var(--primary-green);
+            border-radius: 3px;
+            transition: width 0.6s ease;
+        }
+        
+        .timeline-progress span {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-600);
+        }
+        
+        /* Dropdown menu styles */
+        .dropdown-menu a:hover {
+            background: var(--gray-50) !important;
+        }
+        
+        /* Button animations */
+        .btn {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transition: width 0.4s ease, height 0.4s ease;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+        }
+        
+        .btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .btn * {
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Card animations */
+        .stat-card {
+            animation: statCardFloat 3s ease-in-out infinite;
+        }
+        
+        .stat-card:nth-child(1) { animation-delay: 0s; }
+        .stat-card:nth-child(2) { animation-delay: 0.5s; }
+        .stat-card:nth-child(3) { animation-delay: 1s; }
+        .stat-card:nth-child(4) { animation-delay: 1.5s; }
+        
+        @keyframes statCardFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        /* Project card animations */
+        .project-card {
+            animation: projectCardSlide 0.6s ease-out forwards;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        
+        .project-card:nth-child(1) { animation-delay: 0.1s; }
+        .project-card:nth-child(2) { animation-delay: 0.2s; }
+        .project-card:nth-child(3) { animation-delay: 0.3s; }
+        .project-card:nth-child(4) { animation-delay: 0.4s; }
+        
+        @keyframes projectCardSlide {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Loading animation for real-time updates */
+        .loading-pulse {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <nav class="nav-container container">
+            <a href="#" class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                Floose
+            </a>
+
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" onclick="showPage('dashboard')">
+                        <i class="fas fa-home"></i>
+                        Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="showPage('projects')">
+                        <i class="fas fa-folder"></i>
+                        Projets
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="showPage('analytics')">
+                        <i class="fas fa-chart-line"></i>
+                        Analytics
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="showPage('accounts')">
+                        <i class="fas fa-university"></i>
+                        Comptes
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="showPage('banking')">
+                        <i class="fas fa-link"></i>
+                        Banques
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="showPage('settings')">
+                        <i class="fas fa-cog"></i>
+                        Paramètres
+                    </a>
+                </li>
+            </ul>
+
+            <div class="user-menu">
+                <span class="text-body-sm text-secondary" style="margin-right: var(--space-3);">{{ user.name }}</span>
+                <div class="dropdown" style="position: relative;">
+                    <div class="user-avatar" onclick="toggleUserMenu()" style="cursor: pointer; position: relative;">
+                        {{ user.avatar }}
+                        {% if session.get('login_provider') == 'apple' %}
+                        <div style="position: absolute; bottom: -2px; right: -2px; width: 16px; height: 16px; background: var(--color-slate-900); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white;">
+                            <i class="fab fa-apple" style="color: white; font-size: 8px;"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div id="userDropdown" class="dropdown-menu" style="display: none;">
+                        <a href="#" onclick="showPage('settings')" class="dropdown-item">
+                            <i class="fas fa-user"></i>
+                            Mon Profil
+                        </a>
+                        <a href="#" onclick="showPage('settings')" class="dropdown-item">
+                            <i class="fas fa-cog"></i>
+                            Paramètres
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="/logout" class="dropdown-item" style="color: var(--color-danger);">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Déconnexion
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Page -->
+        <div id="dashboard" class="page-content active">
+            <div class="container">
+                <div class="page-header">
+                    <h1 class="page-title">Tableau de Bord</h1>
+                    <p class="page-subtitle">Vue d'ensemble de vos finances</p>
+                </div>
+                
+                <!-- Stats Grid -->
+                <div class="stats-grid stagger-animation">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-label">Budget Total</div>
+                            <div class="stat-icon primary">
+                                <i class="fas fa-wallet"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value">{{ "%.0f"|format(stats.budget_total) }}€</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-folder"></i>
+                            {{ stats.nombre_projets }} projet{{ 's' if stats.nombre_projets > 1 else '' }}
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-label">Total Depense</div>
+                            <div class="stat-icon slate">
+                                <i class="fas fa-arrow-down"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value">{{ "%.0f"|format(stats.total_depense) }}€</div>
+                        <div class="stat-change negative">
+                            <i class="fas fa-chart-pie"></i>
+                            {{ "%.1f"|format(stats.pourcentage_utilise) }}% utilise
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-label">Solde Disponible</div>
+                            <div class="stat-icon success">
+                                <i class="fas fa-piggy-bank"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value">{{ "%.0f"|format(stats_comptes.total_soldes) }}€</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-university"></i>
+                            {{ stats_comptes.nombre_comptes }} compte{{ 's' if stats_comptes.nombre_comptes > 1 else '' }}
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-label">Projets Actifs</div>
+                            <div class="stat-icon slate">
+                                <i class="fas fa-tasks"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value">{{ stats.nombre_projets }}</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-coins"></i>
+                            Restant: {{ "%.0f"|format(stats.total_restant) }}€
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="quick-actions flex gap-4 mb-8" style="flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="showPage('projects')">
+                        <i class="fas fa-plus"></i>
+                        Nouveau Projet
+                    </button>
+                    <button class="btn btn-outline" onclick="showPage('accounts')">
+                        <i class="fas fa-university"></i>
+                        Ajouter un Compte
+                    </button>
+                    <button class="btn btn-secondary" onclick="openVisualizationOverlay()">
+                        <i class="fas fa-chart-bar"></i>
+                        Vue d'ensemble
+                    </button>
+                    <button class="btn btn-secondary" onclick="showPage('banking')">
+                        <i class="fas fa-link"></i>
+                        Synchroniser Banque
+                    </button>
+                    <button id="toggleDashboardBtn" class="btn btn-secondary" onclick="toggleWidgetDashboard()">
+                        <i class="fas fa-th-large"></i>
+                        <span id="toggleDashboardLabel">Dashboard Widgets</span>
+                    </button>
+                </div>
+
+                <!-- Widget Dashboard Container (hidden by default) -->
+                <div id="widgetDashboardContainer" class="mb-8" style="display: none; min-height: 600px;"></div>
+
+                <!-- Classic Dashboard Content Wrapper -->
+                <div id="classicDashboardContent">
+                
+                <!-- Recent Projects -->
+                {% if projets %}
+                <div class="card mb-6">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-folder-open"></i>
+                            Projets Recents
+                        </h2>
+                        <button class="btn btn-sm btn-outline" onclick="showPage('projects')">
+                            Voir tous
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="projects-grid stagger-animation">
+                            {% for projet in projets[:4] %}
+                            <div class="project-card card-interactive" onclick="openProjectModal({{ projet.id }})" style="--project-color: {{ projet.categorie_couleur }};">
+                                <div class="project-header">
+                                    <div>
+                                        <div class="project-name">{{ projet.nom }}</div>
+                                        <span class="project-category badge" style="background: {{ projet.categorie_couleur }}20; color: {{ projet.categorie_couleur }};">{{ projet.categorie }}</span>
+                                    </div>
+                                </div>
+
+                                <div class="project-budget">
+                                    <span class="budget-spent text-secondary">{{ "%.0f"|format(projet.budget_depense) }}€ depense</span>
+                                    <span class="budget-total font-semibold">{{ "%.0f"|format(projet.budget_alloue) }}€</span>
+                                </div>
+
+                                {% set progress = (projet.budget_depense / projet.budget_alloue * 100) if projet.budget_alloue > 0 else 0 %}
+                                <div class="progress-bar">
+                                    <div class="progress-fill {{ 'warning' if progress > 75 else ('danger' if progress > 90 else '') }}"
+                                         style="width: {{ progress|int }}%"></div>
+                                </div>
+                                <div class="text-caption text-tertiary mt-2">{{ progress|int }}% du budget</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Statistiques par catégorie -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-chart-pie"></i>
+                            Répartition par Catégorie
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                            {% set categories_stats = {} %}
+                            {% for projet in projets %}
+                                {% if categories_stats.update({projet.categorie: {'total': categories_stats.get(projet.categorie, {'total': 0, 'depense': 0, 'couleur': projet.categorie_couleur})['total'] + projet.budget_alloue, 'depense': categories_stats.get(projet.categorie, {'total': 0, 'depense': 0, 'couleur': projet.categorie_couleur})['depense'] + projet.budget_depense, 'couleur': projet.categorie_couleur}}) %}{% endif %}
+                            {% endfor %}
+                            
+                            {% for categorie, data in categories_stats.items() %}
+                            <div style="background: {{ data.couleur }}; padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                                <div style="font-weight: 600; margin-bottom: 8px;">{{ categorie }}</div>
+                                <div style="font-size: 14px; color: var(--gray-600);">
+                                    Budget: {{ "%.0f"|format(data.total) }}€<br>
+                                    Dépensé: {{ "%.0f"|format(data.depense) }}€<br>
+                                    <strong>{{ "%.1f"|format((data.depense / data.total * 100) if data.total > 0 else 0) }}% utilisé</strong>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Alertes et notifications -->
+                {% if stats.projets_en_depassement > 0 %}
+                <div class="card mb-6">
+                    <div class="card-body">
+                        <div class="alert alert-danger">
+                            <div class="alert-icon" style="background: var(--color-danger-light); color: var(--color-danger);">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="alert-content">
+                                <div class="alert-title">Depassement budgetaire detecte</div>
+                                <div class="alert-message">{{ stats.projets_en_depassement }} projet{{ 's' if stats.projets_en_depassement > 1 else '' }} {{ 'ont' if stats.projets_en_depassement > 1 else 'a' }} depasse le budget alloue. Verifiez vos projets pour eviter les depenses excessives.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Évolution temporelle des projets -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-chart-line"></i>
+                            Évolution Temporelle des Projets
+                        </h2>
+                        <div class="card-actions">
+                            <button class="btn btn-sm btn-secondary" onclick="refreshTimelineChart()">
+                                <i class="fas fa-sync-alt"></i>
+                                Actualiser
+                            </button>
+                            <button class="btn btn-sm btn-outline" onclick="forceInitTimelineChart()">
+                                <i class="fas fa-chart-line"></i>
+                                Réinitialiser
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div style="height: 400px; position: relative;">
+                            <canvas id="projectTimelineChart"></canvas>
+                        </div>
+                        <div id="timelineControls" style="margin-top: 16px; display: flex; gap: 12px; align-items: center;">
+                            <label style="font-weight: 500;">Affichage:</label>
+                            <button class="btn btn-sm btn-outline" onclick="setTimelineMode('budget_depense')" id="btn-depense">
+                                Dépenses
+                            </button>
+                            <button class="btn btn-sm btn-outline" onclick="setTimelineMode('budget_alloue')" id="btn-budget">
+                                Budget alloué
+                            </button>
+                            <button class="btn btn-sm btn-outline active" onclick="setTimelineMode('both')" id="btn-both">
+                                Les deux
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                </div><!-- End classicDashboardContent -->
+            </div>
+        </div>
+
+        <!-- Projects Page -->
+        <div id="projects" class="page-content">
+            <div class="container">
+                <div class="page-header">
+                    <h1 class="page-title">Gestion des Projets</h1>
+                    <p class="page-subtitle">Créez et gérez vos budgets de projets</p>
+                </div>
+                
+                <!-- Add Project Form -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-plus"></i>
+                            Nouveau Projet
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <form action="/ajouter_projet" method="POST">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Nom du projet</label>
+                                    <input type="text" name="nom" class="form-input" placeholder="Ex: Vacances été 2024" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Budget alloué</label>
+                                    <input type="number" name="budget" step="0.01" class="form-input" placeholder="1500" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Catégorie</label>
+                                    <select name="categorie_id" id="projectCategorySelect" class="form-select" required>
+                                        <option value="">Choisir une catégorie...</option>
+                                    </select>
+                                    <button type="button" onclick="openCategoryManager('projet')" style="margin-top: 8px; background: var(--gray-200); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">
+                                        <i class="fas fa-plus"></i> Gérer les catégories
+                                    </button>
+                                </div>
+                                <div class="form-group" style="display: flex; align-items: end;">
+                                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                                        <i class="fas fa-save"></i>
+                                        Créer le Projet
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- All Projects -->
+                {% if projets %}
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-folder"></i>
+                            Tous les Projets
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="projects-grid">
+                            {% for projet in projets %}
+                            <div class="project-card" onclick="openProjectModal({{ projet.id }})" style="border-left: 4px solid {{ projet.categorie_couleur }};">
+                                <div class="project-header">
+                                    <div class="project-name">{{ projet.nom }}</div>
+                                    <div class="project-category" style="background: {{ projet.categorie_couleur }}; padding: 2px 8px; border-radius: 12px; font-size: 12px;">{{ projet.categorie }}</div>
+                                </div>
+                                
+                                <div class="project-budget">
+                                    <span class="budget-spent">{{ "%.0f"|format(projet.budget_depense) }}€</span>
+                                    <span class="budget-total">{{ "%.0f"|format(projet.budget_alloue) }}€</span>
+                                </div>
+                                
+                                {% set progress = (projet.budget_depense / projet.budget_alloue * 100) if projet.budget_alloue > 0 else 0 %}
+                                <div class="progress-bar">
+                                    <div class="progress-fill {{ 'warning' if progress > 75 else ('danger' if progress > 90 else '') }}" 
+                                         style="width: {{ progress|int }}%"></div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card">
+                    <div class="card-body">
+                        <div class="empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            <h3>Aucun projet</h3>
+                            <p>Créez votre premier projet pour commencer à gérer vos budgets</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Accounts Page -->
+        <div id="accounts" class="page-content">
+            <div class="container">
+                <div class="page-header">
+                    <h1 class="page-title">Comptes Bancaires</h1>
+                    <p class="page-subtitle">Gérez vos comptes et suivez vos soldes</p>
+                </div>
+                
+                <!-- Add Account Form -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-plus"></i>
+                            Ajouter un Compte
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <form action="/ajouter_compte" method="POST">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Nom du compte</label>
+                                    <input type="text" name="nom" class="form-input" placeholder="Compte Courant Principal" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Banque</label>
+                                    <input type="text" name="banque" class="form-input" placeholder="BNP Paribas" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Solde initial</label>
+                                    <input type="number" name="solde_initial" step="0.01" class="form-input" placeholder="1000" value="0">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Type de compte</label>
+                                    <select name="type_compte" class="form-select">
+                                        <option value="Courant">Compte Courant</option>
+                                        <option value="Épargne">Compte Épargne</option>
+                                        <option value="Livret A">Livret A</option>
+                                        <option value="PEL">Plan Épargne Logement</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="display: flex; align-items: end;">
+                                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                                        <i class="fas fa-save"></i>
+                                        Ajouter le Compte
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Accounts List -->
+                {% if comptes %}
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-university"></i>
+                            Mes Comptes
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="accounts-grid">
+                            {% for compte in comptes %}
+                            <div class="account-card">
+                                <div class="account-header">
+                                    <div class="account-name">{{ compte.nom }}</div>
+                                    <div class="account-bank">{{ compte.banque }}</div>
+                                </div>
+                                
+                                <div class="account-balance {{ 'balance-positive' if compte.solde >= 0 else 'balance-negative' }}">
+                                    {{ "%.2f"|format(compte.solde) }}€
+                                </div>
+                                <div style="color: var(--gray-500); font-size: 14px; margin-bottom: 16px;">
+                                    {{ compte.type_compte }}
+                                </div>
+                                
+                                <form action="/operation_bancaire/{{ compte.id }}" method="POST" style="display: grid; gap: 12px;">
+                                    <select name="type_operation" class="form-input" style="height: 36px;" required>
+                                        <option value="crédit">Crédit (Dépôt)</option>
+                                        <option value="débit">Débit (Retrait)</option>
+                                    </select>
+                                    <input type="number" name="montant" step="0.01" class="form-input" style="height: 36px;" placeholder="Montant" required>
+                                    <input type="text" name="description" class="form-input" style="height: 36px;" placeholder="Description" required>
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-exchange-alt"></i>
+                                        Valider
+                                    </button>
+                                </form>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card">
+                    <div class="card-body">
+                        <div class="empty-state">
+                            <i class="fas fa-university"></i>
+                            <h3>Aucun compte</h3>
+                            <p>Ajoutez votre premier compte pour commencer à suivre vos finances</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Banking Page -->
+        <div id="banking" class="page-content">
+            <div class="container">
+                <div class="page-header">
+                    <h1 class="page-title">Liaisons Bancaires</h1>
+                    <p class="page-subtitle">Connectez vos banques pour une synchronisation automatique</p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-link"></i>
+                            Banques Supportées
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                            <div style="border: 1px solid var(--border); border-radius: 12px; padding: 20px; text-align: center;">
+                                <i class="fas fa-university" style="font-size: 24px; color: var(--primary-green); margin-bottom: 12px;"></i>
+                                <h3 style="margin-bottom: 8px;">BNP Paribas</h3>
+                                <p style="color: var(--gray-500); margin-bottom: 16px;">Synchronisation en temps réel</p>
+                                <button class="btn btn-outline btn-sm">
+                                    <i class="fas fa-plug"></i>
+                                    Connecter
+                                </button>
+                            </div>
+                            
+                            <div style="border: 1px solid var(--border); border-radius: 12px; padding: 20px; text-align: center;">
+                                <i class="fas fa-university" style="font-size: 24px; color: var(--primary-green); margin-bottom: 12px;"></i>
+                                <h3 style="margin-bottom: 8px;">Crédit Agricole</h3>
+                                <p style="color: var(--gray-500); margin-bottom: 16px;">Import automatique des transactions</p>
+                                <button class="btn btn-outline btn-sm">
+                                    <i class="fas fa-plug"></i>
+                                    Connecter
+                                </button>
+                            </div>
+                            
+                            <div style="border: 1px solid var(--border); border-radius: 12px; padding: 20px; text-align: center;">
+                                <i class="fas fa-university" style="font-size: 24px; color: var(--primary-green); margin-bottom: 12px;"></i>
+                                <h3 style="margin-bottom: 8px;">Société Générale</h3>
+                                <p style="color: var(--gray-500); margin-bottom: 16px;">Catégorisation intelligente</p>
+                                <button class="btn btn-outline btn-sm">
+                                    <i class="fas fa-plug"></i>
+                                    Connecter
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border);">
+                            <h3 style="margin-bottom: 16px; color: var(--text-black);">
+                                <i class="fas fa-shield-alt" style="color: var(--primary-green); margin-right: 8px;"></i>
+                                Sécurité & Confidentialité
+                            </h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 16px;">
+                                <div style="display: flex; align-items: start; gap: 12px;">
+                                    <i class="fas fa-lock" style="color: var(--primary-green); margin-top: 4px;"></i>
+                                    <div>
+                                        <h4 style="margin-bottom: 4px;">Chiffrement de bout en bout</h4>
+                                        <p style="color: var(--gray-500); font-size: 14px;">Toutes vos données sont protégées par un chiffrement AES 256</p>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: start; gap: 12px;">
+                                    <i class="fas fa-eye-slash" style="color: var(--primary-green); margin-top: 4px;"></i>
+                                    <div>
+                                        <h4 style="margin-bottom: 4px;">Accès en lecture seule</h4>
+                                        <p style="color: var(--gray-500); font-size: 14px;">Nous ne pouvons que consulter, jamais effectuer de transactions</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div id="settings" class="page-content">
+            <div class="container">
+                <div class="page-header">
+                    <h1 class="page-title">Paramètres</h1>
+                    <p class="page-subtitle">Configurez votre compte et vos préférences</p>
+                </div>
+                
+                <div style="display: grid; gap: 24px;">
+                    <!-- Profile Settings -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <i class="fas fa-user"></i>
+                                Profil Utilisateur
+                            </h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Nom</label>
+                                    <input type="text" class="form-input" value="John Doe" placeholder="Votre nom">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-input" value="john.doe@example.com" placeholder="Votre email">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Téléphone</label>
+                                    <input type="tel" class="form-input" placeholder="Votre téléphone">
+                                </div>
+                                <div class="form-group" style="display: flex; align-items: end;">
+                                    <button class="btn btn-primary" style="width: 100%;">
+                                        <i class="fas fa-save"></i>
+                                        Sauvegarder
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Notification Settings -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <i class="fas fa-bell"></i>
+                                Notifications
+                            </h2>
+                        </div>
+                        <div class="card-body">
+                            <div style="display: grid; gap: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; border: 1px solid var(--border); border-radius: 8px;">
+                                    <div>
+                                        <h4 style="margin-bottom: 4px;">Alertes de budget</h4>
+                                        <p style="color: var(--gray-500); font-size: 14px;">Recevoir des alertes quand un budget atteint 80%</p>
+                                    </div>
+                                    <input type="checkbox" checked style="transform: scale(1.2);">
+                                </div>
+                                
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; border: 1px solid var(--border); border-radius: 8px;">
+                                    <div>
+                                        <h4 style="margin-bottom: 4px;">Synchronisation bancaire</h4>
+                                        <p style="color: var(--gray-500); font-size: 14px;">Notifications lors de nouvelles transactions</p>
+                                    </div>
+                                    <input type="checkbox" style="transform: scale(1.2);">
+                                </div>
+                                
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; border: 1px solid var(--border); border-radius: 8px;">
+                                    <div>
+                                        <h4 style="margin-bottom: 4px;">Rapports mensuels</h4>
+                                        <p style="color: var(--gray-500); font-size: 14px;">Recevoir un résumé mensuel par email</p>
+                                    </div>
+                                    <input type="checkbox" checked style="transform: scale(1.2);">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Security Settings -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <i class="fas fa-shield-alt"></i>
+                                Sécurité
+                            </h2>
+                        </div>
+                        <div class="card-body">
+                            <div style="display: grid; gap: 16px;">
+                                <button class="btn btn-outline" style="justify-self: start;">
+                                    <i class="fas fa-key"></i>
+                                    Changer le mot de passe
+                                </button>
+                                <button class="btn btn-outline" style="justify-self: start;">
+                                    <i class="fas fa-mobile-alt"></i>
+                                    Configuration 2FA
+                                </button>
+                                <button class="btn btn-outline" style="justify-self: start;">
+                                    <i class="fas fa-download"></i>
+                                    Exporter les données
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Page -->
+        <div id="analytics" class="page-content" style="display: none;">
+            <div class="container">
+                <div class="page-header">
+                    <h1 class="page-title">
+                        <i class="fas fa-chart-line"></i>
+                        Analytics Avancées
+                    </h1>
+                    <p class="page-subtitle">Analyses approfondies et prévisions intelligentes</p>
+                    <div class="page-actions">
+                        <button class="btn btn-outline" onclick="exportAnalytics()">
+                            <i class="fas fa-download"></i>
+                            Exporter PDF
+                        </button>
+                        <button class="btn btn-primary" onclick="refreshAnalytics()">
+                            <i class="fas fa-sync-alt"></i>
+                            Actualiser
+                        </button>
+                    </div>
+                </div>
+
+                <div style="display: grid; gap: 24px;">
+                    <!-- KPI Cards -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                        <div class="kpi-card">
+                            <div class="kpi-icon" style="background: var(--primary-green);">
+                                <i class="fas fa-trending-up"></i>
+                            </div>
+                            <div class="kpi-content">
+                                <div class="kpi-label">Tendance Mensuelle</div>
+                                <div class="kpi-value" id="monthlyTrend">+12.5%</div>
+                                <div class="kpi-sparkline">
+                                    <canvas id="trendSparkline" width="100" height="30"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="kpi-card">
+                            <div class="kpi-icon" style="background: var(--primary-black);">
+                                <i class="fas fa-bullseye"></i>
+                            </div>
+                            <div class="kpi-content">
+                                <div class="kpi-label">Objectifs Atteints</div>
+                                <div class="kpi-value" id="goalsReached">78%</div>
+                                <div class="kpi-progress">
+                                    <div style="width: 78%; background: var(--primary-green); height: 4px; border-radius: 2px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="kpi-card">
+                            <div class="kpi-icon" style="background: var(--warning);">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="kpi-content">
+                                <div class="kpi-label">Projets à Risque</div>
+                                <div class="kpi-value" id="riskyProjects">3</div>
+                                <div class="kpi-subtitle">Budget > 90%</div>
+                            </div>
+                        </div>
+                        
+                        <div class="kpi-card">
+                            <div class="kpi-icon" style="background: var(--success);">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            <div class="kpi-content">
+                                <div class="kpi-label">ROI Moyen</div>
+                                <div class="kpi-value" id="avgROI">+15.2%</div>
+                                <div class="kpi-subtitle">Sur 6 mois</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Grid -->
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+                        <!-- Timeline Chart -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">
+                                    <i class="fas fa-chart-area"></i>
+                                    Évolution Temporelle des Dépenses
+                                </h2>
+                                <div class="card-actions">
+                                    <select class="form-select" onchange="updateTimeRange(this.value)">
+                                        <option value="7d">7 jours</option>
+                                        <option value="30d" selected>30 jours</option>
+                                        <option value="90d">90 jours</option>
+                                        <option value="1y">1 an</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div style="width: 100%; height: 350px; position: relative;">
+                                    <canvas id="timelineChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gauge Chart -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">
+                                    <i class="fas fa-tachometer-alt"></i>
+                                    Performance Globale
+                                </h2>
+                            </div>
+                            <div class="card-body">
+                                <div style="width: 100%; height: 250px; position: relative;">
+                                    <canvas id="gaugeChart"></canvas>
+                                </div>
+                                <div style="text-align: center; margin-top: 16px;">
+                                    <div style="color: var(--gray-500); font-size: 14px;">Score de Performance</div>
+                                    <div style="color: var(--text-black); font-size: 24px; font-weight: 700;">85/100</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Charts -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <!-- Heatmap -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">
+                                    <i class="fas fa-th"></i>
+                                    Heatmap des Dépenses
+                                </h2>
+                            </div>
+                            <div class="card-body">
+                                <div style="width: 100%; height: 300px; position: relative;">
+                                    <canvas id="heatmapChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Predictive Chart -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">
+                                    <i class="fas fa-crystal-ball"></i>
+                                    Prévisions Intelligentes
+                                </h2>
+                                <div class="card-actions">
+                                    <span class="badge badge-info">
+                                        <i class="fas fa-robot"></i>
+                                        IA
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div style="width: 100%; height: 250px; position: relative;">
+                                    <canvas id="predictiveChart"></canvas>
+                                </div>
+                                <div style="margin-top: 16px; padding: 12px; background: var(--gray-50); border-radius: 8px;">
+                                    <div style="font-size: 14px; color: var(--gray-600); margin-bottom: 8px;">Prédiction pour le mois prochain :</div>
+                                    <div style="font-size: 16px; font-weight: 600; color: var(--text-black);">
+                                        <i class="fas fa-arrow-up" style="color: var(--danger);"></i>
+                                        +8.5% de dépenses estimées
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Comparison and Alerts -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <!-- Period Comparison -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">
+                                    <i class="fas fa-balance-scale"></i>
+                                    Comparaison Périodes
+                                </h2>
+                            </div>
+                            <div class="card-body">
+                                <div style="width: 100%; height: 300px; position: relative;">
+                                    <canvas id="comparisonChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Smart Alerts -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">
+                                    <i class="fas fa-bell"></i>
+                                    Alertes Intelligentes
+                                </h2>
+                                <div class="card-actions">
+                                    <button class="btn btn-sm btn-outline" onclick="configureAlerts()">
+                                        <i class="fas fa-cog"></i>
+                                        Configurer
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="alerts-container" style="max-height: 300px; overflow-y: auto;">
+                                    <div class="alert alert-warning">
+                                        <div class="alert-icon">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                        </div>
+                                        <div class="alert-content">
+                                            <div class="alert-title">Dépassement Imminent</div>
+                                            <div class="alert-message">Le projet "Formation" atteindra 90% de son budget dans 3 jours.</div>
+                                            <div class="alert-time">Il y a 2 heures</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="alert alert-info">
+                                        <div class="alert-icon">
+                                            <i class="fas fa-chart-line"></i>
+                                        </div>
+                                        <div class="alert-content">
+                                            <div class="alert-title">Tendance Positive</div>
+                                            <div class="alert-message">Vos dépenses sont 15% inférieures à la moyenne mensuelle.</div>
+                                            <div class="alert-time">Il y a 5 heures</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="alert alert-success">
+                                        <div class="alert-icon">
+                                            <i class="fas fa-target"></i>
+                                        </div>
+                                        <div class="alert-content">
+                                            <div class="alert-title">Objectif Atteint</div>
+                                            <div class="alert-message">Le projet "Marketing" a été complété sous budget.</div>
+                                            <div class="alert-time">Hier</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Project Modal -->
+    <div id="projectModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2 id="modalTitle" class="modal-title">Details du Projet</h2>
+                <button class="modal-close" onclick="closeProjectModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="stats-grid" style="margin-bottom: var(--space-8);">
+                    <div class="stat-card" style="text-align: center;">
+                        <div class="stat-label">Budget Alloue</div>
+                        <div id="modalBudgetAlloue" class="stat-value">0€</div>
+                    </div>
+                    <div class="stat-card" style="text-align: center;">
+                        <div class="stat-label">Total Depense</div>
+                        <div id="modalBudgetDepense" class="stat-value">0€</div>
+                    </div>
+                    <div class="stat-card" style="text-align: center;">
+                        <div class="stat-label">Restant</div>
+                        <div id="modalBudgetRestant" class="stat-value text-success">0€</div>
+                    </div>
+                    <div class="stat-card" style="text-align: center;">
+                        <div class="stat-label">Progression</div>
+                        <div id="modalProgression" class="stat-value">0%</div>
+                    </div>
+                </div>
+                
+                <!-- Graphiques en grille -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;">
+                    <!-- Répartition des dépenses -->
+                    <div style="background: var(--gray-50); border-radius: 12px; padding: 20px;">
+                        <div style="font-size: 16px; font-weight: 600; color: var(--text-black); margin-bottom: 16px; text-align: center;">Répartition des Dépenses</div>
+                        <div style="width: 100%; height: 200px; position: relative;">
+                            <canvas id="expensesChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Évolution temporelle du projet -->
+                    <div style="background: var(--gray-50); border-radius: 12px; padding: 20px;">
+                        <div style="font-size: 16px; font-weight: 600; color: var(--text-black); margin-bottom: 16px; text-align: center;">Évolution Temporelle</div>
+                        <div style="width: 100%; height: 200px; position: relative;">
+                            <canvas id="projectTimelineModalChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 32px;">
+                    <h3 style="margin-bottom: 16px; font-size: 18px; font-weight: 600;">Liste des Dépenses</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: var(--gray-50);">
+                                <th style="padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--text-black); font-size: 14px;">Description</th>
+                                <th style="padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--text-black); font-size: 14px;">Montant</th>
+                                <th style="padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--text-black); font-size: 14px;">Pourcentage</th>
+                                <th style="padding: 12px; text-align: center; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--text-black); font-size: 14px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expensesTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="padding-top: 24px; border-top: 1px solid var(--border);">
+                    <h3 style="margin-bottom: 16px; font-size: 18px; font-weight: 600;">Ajouter une Dépense</h3>
+                    <form id="addExpenseForm" onsubmit="addExpense(event)">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Description</label>
+                                <input type="text" id="expenseDescription" class="form-input" placeholder="Description de la dépense" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Montant</label>
+                                <input type="number" id="expenseAmount" step="0.01" class="form-input" placeholder="Montant en €" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Catégorie</label>
+                                <select id="expenseCategorySelect" class="form-select" required>
+                                    <option value="">Choisir une catégorie...</option>
+                                </select>
+                                <button type="button" onclick="openCategoryManager('depense')" style="margin-top: 8px; background: var(--gray-200); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">
+                                    <i class="fas fa-plus"></i> Gérer les catégories
+                                </button>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Date de la dépense</label>
+                                <input type="date" id="expenseDate" class="form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Commentaire (optionnel)</label>
+                                <textarea id="expenseComment" class="form-input" placeholder="Commentaire ou note sur cette dépense" rows="2"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Compte (optionnel)</label>
+                                <select id="expenseAccount" class="form-select">
+                                    <option value="">Aucun compte</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; align-items: end;">
+                                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                                    <i class="fas fa-plus"></i>
+                                    Ajouter
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal d'édition des dépenses -->
+    <div id="editExpenseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Modifier la Dépense</h2>
+                <button class="modal-close" onclick="closeEditExpenseModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editExpenseForm" onsubmit="saveExpenseChanges(event)">
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <input type="text" id="editExpenseDescription" class="form-input" placeholder="Description de la dépense" required maxlength="200">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Montant</label>
+                        <input type="number" id="editExpenseAmount" step="0.01" class="form-input" placeholder="Montant en €" required min="0.01">
+                    </div>
+                    <div style="display: flex; gap: 12px; margin-top: 24px;">
+                        <button type="button" onclick="closeEditExpenseModal()" class="btn" style="background: var(--gray-300); color: var(--gray-600); flex: 1;">
+                            Annuler
+                        </button>
+                        <button type="submit" class="btn btn-primary" style="flex: 1;">
+                            <i class="fas fa-save"></i>
+                            Sauvegarder
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Visualization Overlay -->
+    <div id="visualizationOverlay" class="visualization-overlay">
+        <div class="overlay-content">
+            <div class="overlay-header">
+                <h2><i class="fas fa-chart-line"></i> Vue d'ensemble des Projets</h2>
+                <button class="overlay-close" onclick="closeVisualizationOverlay()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="overlay-body">
+                <div class="visualization-grid">
+                    <!-- Chart Container -->
+                    <div class="viz-card">
+                        <h3>Répartition des Budgets</h3>
+                        <div style="width: 100%; height: 250px; position: relative;">
+                            <canvas id="budgetOverviewChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress Chart -->
+                    <div class="viz-card">
+                        <h3>Progression des Projets</h3>
+                        <div style="width: 100%; height: 250px; position: relative;">
+                            <canvas id="progressChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Real-time Stats -->
+                    <div class="viz-card">
+                        <h3>Statistiques Temps Réel</h3>
+                        <div class="real-time-stats">
+                            <div class="stat-item">
+                                <div class="stat-icon green">
+                                    <i class="fas fa-wallet"></i>
+                                </div>
+                                <div class="stat-details">
+                                    <div class="stat-value" id="realTimeTotal">{{ "%.0f"|format(stats.budget_total) }}€</div>
+                                    <div class="stat-label">Budget Total</div>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-item">
+                                <div class="stat-icon red">
+                                    <i class="fas fa-arrow-down"></i>
+                                </div>
+                                <div class="stat-details">
+                                    <div class="stat-value" id="realTimeSpent">{{ "%.0f"|format(stats.total_depense) }}€</div>
+                                    <div class="stat-label">Total Dépensé</div>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-item">
+                                <div class="stat-icon blue">
+                                    <i class="fas fa-tasks"></i>
+                                </div>
+                                <div class="stat-details">
+                                    <div class="stat-value" id="realTimeProjects">{{ stats.nombre_projets }}</div>
+                                    <div class="stat-label">Projets Actifs</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Category Breakdown -->
+                    <div class="viz-card">
+                        <h3>Répartition par Catégorie</h3>
+                        <div style="width: 100%; height: 250px; position: relative;">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Timeline -->
+                    <div class="viz-card full-width">
+                        <h3>Timeline des Projets</h3>
+                        <div class="timeline-container">
+                            <div class="timeline">
+                                {% for projet in projets %}
+                                <div class="timeline-item" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
+                                    <div class="timeline-marker"></div>
+                                    <div class="timeline-content">
+                                        <h4>{{ projet.nom }}</h4>
+                                        <p>{{ projet.categorie }} - {{ "%.0f"|format(projet.budget_alloue) }}€</p>
+                                        <div class="timeline-progress">
+                                            {% set progress = (projet.budget_depense / projet.budget_alloue * 100) if projet.budget_alloue > 0 else 0 %}
+                                            <div class="timeline-progress-bar">
+                                                <div class="timeline-progress-fill" style="width: {{ progress|int }}%;"></div>
+                                            </div>
+                                            <span>{{ progress|int }}%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // User menu toggle
+        function toggleUserMenu() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const userDropdown = document.querySelector('.user-dropdown');
+            const dropdown = document.getElementById('userDropdown');
+            
+            if (!userDropdown.contains(event.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+        
+        // Visualization overlay functions
+        function openVisualizationOverlay() {
+            const overlay = document.getElementById('visualizationOverlay');
+            overlay.classList.add('show');
+            document.body.style.overflow = 'hidden';
+            
+            // Initialize charts after a short delay for smooth animation
+            setTimeout(() => {
+                initializeOverlayCharts();
+                startRealTimeUpdates();
+            }, 500);
+        }
+        
+        function closeVisualizationOverlay() {
+            const overlay = document.getElementById('visualizationOverlay');
+            overlay.classList.remove('show');
+            document.body.style.overflow = '';
+            
+            // Stop real-time updates
+            if (window.realTimeInterval) {
+                clearInterval(window.realTimeInterval);
+            }
+        }
+        
+        // Initialize visualization charts
+        function initializeOverlayCharts() {
+            // Budget Overview Chart (Pie Chart)
+            const budgetCtx = document.getElementById('budgetOverviewChart').getContext('2d');
+            new Chart(budgetCtx, {
+                type: 'pie',
+                data: {
+                    labels: [{% for projet in projets %}'{{ projet.nom }}'{% if not loop.last %},{% endif %}{% endfor %}],
+                    datasets: [{
+                        data: [{% for projet in projets %}{{ projet.budget_alloue }}{% if not loop.last %},{% endif %}{% endfor %}],
+                        backgroundColor: ['#10b981', '#000000', '#059669', '#34d399', '#6b7280', '#1f2937'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true,
+                                font: { family: 'Inter', size: 11 }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Progress Chart (Bar Chart)
+            const progressCtx = document.getElementById('progressChart').getContext('2d');
+            new Chart(progressCtx, {
+                type: 'bar',
+                data: {
+                    labels: [{% for projet in projets %}'{{ projet.nom }}'{% if not loop.last %},{% endif %}{% endfor %}],
+                    datasets: [{
+                        label: 'Progression (%)',
+                        data: [{% for projet in projets %}{{ ((projet.budget_depense / projet.budget_alloue) * 100) if projet.budget_alloue > 0 else 0 }}{% if not loop.last %},{% endif %}{% endfor %}],
+                        backgroundColor: '#10b981',
+                        borderRadius: 8,
+                        barThickness: 30
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+            
+            // Category Chart (Doughnut)
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+            const categories = {};
+            {% for projet in projets %}
+            categories['{{ projet.categorie }}'] = (categories['{{ projet.categorie }}'] || 0) + {{ projet.budget_alloue }};
+            {% endfor %}
+            
+            new Chart(categoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(categories),
+                    datasets: [{
+                        data: Object.values(categories),
+                        backgroundColor: ['#10b981', '#000000', '#059669', '#34d399'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true,
+                                font: { family: 'Inter', size: 11 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Real-time updates simulation
+        function startRealTimeUpdates() {
+            window.realTimeInterval = setInterval(() => {
+                // Add pulse animation to real-time stats
+                document.querySelectorAll('.stat-value').forEach(element => {
+                    element.classList.add('loading-pulse');
+                    setTimeout(() => {
+                        element.classList.remove('loading-pulse');
+                    }, 1000);
+                });
+                
+                // Simulate data refresh (in real app, this would fetch from API)
+                updateRealTimeStats();
+            }, 5000);
+        }
+        
+        async function updateRealTimeStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+                
+                // Update real-time values with animation
+                animateNumberUpdate('realTimeTotal', stats.budget_total);
+                animateNumberUpdate('realTimeSpent', stats.total_depense);
+                animateNumberUpdate('realTimeProjects', stats.nombre_projets);
+                
+            } catch (error) {
+                console.error('Erreur lors de la mise à jour temps réel:', error);
+            }
+        }
+        
+        function animateNumberUpdate(elementId, newValue) {
+            const element = document.getElementById(elementId);
+            const currentValue = parseFloat(element.textContent.replace(/[€,]/g, '')) || 0;
+            const difference = newValue - currentValue;
+            const steps = 20;
+            const stepValue = difference / steps;
+            let currentStep = 0;
+            
+            const updateInterval = setInterval(() => {
+                currentStep++;
+                const displayValue = currentValue + (stepValue * currentStep);
+                
+                if (elementId === 'realTimeProjects') {
+                    element.textContent = Math.round(displayValue);
+                } else {
+                    element.textContent = Math.round(displayValue) + '€';
+                }
+                
+                if (currentStep >= steps) {
+                    clearInterval(updateInterval);
+                    if (elementId === 'realTimeProjects') {
+                        element.textContent = newValue;
+                    } else {
+                        element.textContent = Math.round(newValue) + '€';
+                    }
+                }
+            }, 50);
+        }
+        
+        // Navigation
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Remove active class from all nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // Show selected page
+            document.getElementById(pageId).classList.add('active');
+            
+            // Add active class to clicked nav link
+            event.target.classList.add('active');
+            
+            // Initialiser le graphique temporel si on va sur le dashboard
+            if (pageId === 'dashboard') {
+                setTimeout(() => {
+                    initializeTimelineChart();
+                }, 100); // Petit délai pour s'assurer que la page est visible
+            }
+        }
+        
+        // Modal and project functionality (keeping existing code)
+        let currentChart = null;
+        let currentProjectId = null;
+        
+        async function openProjectModal(projectId) {
+            currentProjectId = projectId;
+            try {
+                const response = await fetch(`/api/projet/${projectId}`);
+                const projet = await response.json();
+                
+                if (projet.error) {
+                    alert('Erreur lors du chargement du projet');
+                    return;
+                }
+                
+                // S'assurer que les catégories sont chargées
+                if (categoriesCache.size === 0) {
+                    await loadAllCategories();
+                }
+                
+                document.getElementById('modalTitle').textContent = `${projet.nom} - ${projet.categorie}`;
+                document.getElementById('modalBudgetAlloue').textContent = `${projet.budget_alloue.toFixed(0)}€`;
+                document.getElementById('modalBudgetDepense').textContent = `${projet.budget_depense.toFixed(0)}€`;
+                document.getElementById('modalBudgetRestant').textContent = `${(projet.budget_alloue - projet.budget_depense).toFixed(0)}€`;
+                document.getElementById('modalProgression').textContent = `${((projet.budget_depense / projet.budget_alloue) * 100).toFixed(1)}%`;
+                
+                createExpensesChart(projet.depenses);
+                updateExpensesTable(projet.depenses, projet.budget_depense);
+                await loadAccountsSelect();
+                await createProjectTimelineModalChart(projectId); // Créer le graphique temporel du projet
+                
+                // Initialiser la date du jour par défaut
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('expenseDate').value = today;
+                
+                document.getElementById('projectModal').classList.add('show');
+                document.body.style.overflow = 'hidden';
+                
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors du chargement des données');
+            }
+        }
+        
+        function closeProjectModal() {
+            document.getElementById('projectModal').classList.remove('show');
+            document.body.style.overflow = '';
+            
+            if (currentChart) {
+                currentChart.destroy();
+                currentChart = null;
+            }
+            
+            document.getElementById('addExpenseForm').reset();
+            currentProjectId = null;
+        }
+        
+        async function loadAccountsSelect() {
+            try {
+                const response = await fetch('/api/comptes');
+                const comptes = await response.json();
+                
+                const select = document.getElementById('expenseAccount');
+                select.innerHTML = '<option value="">Aucun compte</option>';
+                
+                comptes.forEach(compte => {
+                    const option = document.createElement('option');
+                    option.value = compte.id;
+                    option.textContent = `${compte.nom} - ${compte.banque} (${compte.solde.toFixed(0)}€)`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erreur lors du chargement des comptes:', error);
+            }
+        }
+        
+        async function addExpense(event) {
+            event.preventDefault();
+            
+            if (!currentProjectId) {
+                alert('Erreur: aucun projet sélectionné');
+                return;
+            }
+            
+            const description = document.getElementById('expenseDescription').value;
+            const montant = parseFloat(document.getElementById('expenseAmount').value);
+            const categorieId = document.getElementById('expenseCategorySelect').value;
+            const dateDepense = document.getElementById('expenseDate').value;
+            const commentaire = document.getElementById('expenseComment').value;
+            const compteId = document.getElementById('expenseAccount').value;
+            
+            if (!description || !montant || montant <= 0 || !categorieId || !dateDepense) {
+                alert('Veuillez remplir tous les champs obligatoires');
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('description', description);
+                formData.append('montant', montant);
+                formData.append('categorie_id', categorieId);
+                formData.append('date_depense', dateDepense);
+                if (commentaire) {
+                    formData.append('commentaire', commentaire);
+                }
+                if (compteId) {
+                    formData.append('compte_id', compteId);
+                }
+                
+                const response = await fetch(`/ajouter_depense/${currentProjectId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    document.getElementById('addExpenseForm').reset();
+                    // Remettre la date du jour par défaut
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('expenseDate').value = today;
+                    
+                    await refreshProjectData();
+                    await loadAccountsSelect();
+                    await loadCategorySelect('expenseCategorySelect', 'depense');
+                    await refreshTimelineChart(); // Actualiser le graphique temporel
+                } else {
+                    const error = await response.json();
+                    alert(error.message || 'Erreur lors de l\'ajout de la dépense');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de l\'ajout de la dépense');
+            }
+        }
+        
+        async function refreshProjectData() {
+            if (!currentProjectId) return;
+            
+            try {
+                const response = await fetch(`/api/projet/${currentProjectId}`);
+                const projet = await response.json();
+                
+                if (projet.error) {
+                    alert('Erreur lors du rechargement');
+                    return;
+                }
+                
+                // S'assurer que les catégories sont chargées
+                if (categoriesCache.size === 0) {
+                    await loadAllCategories();
+                }
+                
+                document.getElementById('modalBudgetAlloue').textContent = `${projet.budget_alloue.toFixed(0)}€`;
+                document.getElementById('modalBudgetDepense').textContent = `${projet.budget_depense.toFixed(0)}€`;
+                document.getElementById('modalBudgetRestant').textContent = `${(projet.budget_alloue - projet.budget_depense).toFixed(0)}€`;
+                document.getElementById('modalProgression').textContent = `${((projet.budget_depense / projet.budget_alloue) * 100).toFixed(1)}%`;
+                
+                createExpensesChart(projet.depenses);
+                updateExpensesTable(projet.depenses, projet.budget_depense);
+                await createProjectTimelineModalChart(currentProjectId); // Actualiser le graphique temporel du projet
+                
+            } catch (error) {
+                console.error('Erreur lors du rechargement:', error);
+            }
+        }
+        
+        function createExpensesChart(depenses) {
+            const ctx = document.getElementById('expensesChart').getContext('2d');
+            
+            if (currentChart) {
+                currentChart.destroy();
+            }
+            
+            if (!depenses || depenses.length === 0) {
+                ctx.fillStyle = '#6b7280';
+                ctx.font = '16px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText('Aucune dépense', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
+            
+            const labels = depenses.map(d => d.description);
+            const data = depenses.map(d => d.montant);
+            const backgroundColors = depenses.map(d => getCategoryColor(d.categorie_id));
+            
+            currentChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: backgroundColors,
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                font: {
+                                    size: 12,
+                                    family: 'Inter'
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.raw / total) * 100).toFixed(1);
+                                    return `${context.label}: ${context.raw.toFixed(0)}€ (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateExpensesTable(depenses, totalDepense) {
+            const tbody = document.getElementById('expensesTableBody');
+            tbody.innerHTML = '';
+            
+            if (!depenses || depenses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--gray-500); padding: 20px;">Aucune dépense</td></tr>';
+                return;
+            }
+            
+            depenses.forEach(depense => {
+                const row = document.createElement('tr');
+                const percentage = ((depense.montant / totalDepense) * 100).toFixed(1);
+                
+                row.innerHTML = `
+                    <td style="padding: 12px; font-size: 14px; color: var(--gray-500); border-bottom: 1px solid var(--border);">${depense.description}</td>
+                    <td style="padding: 12px; font-size: 14px; font-weight: 600; color: var(--text-black); border-bottom: 1px solid var(--border);">${depense.montant.toFixed(0)}€</td>
+                    <td style="padding: 12px; font-size: 14px; color: var(--gray-500); border-bottom: 1px solid var(--border);">${percentage}%</td>
+                    <td style="padding: 12px; text-align: center; border-bottom: 1px solid var(--border);">
+                        <button onclick="editExpense(${depense.id}, \`${depense.description}\`, ${depense.montant})" 
+                                style="background: var(--primary-green); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-right: 8px; transition: all 0.2s ease;"
+                                onmouseover="this.style.background='var(--primary-green-dark)'"
+                                onmouseout="this.style.background='var(--primary-green)'">
+                            <i class="fas fa-edit"></i> Modifier
+                        </button>
+                        <button onclick="deleteExpense(${depense.id})" 
+                                style="background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;"
+                                onmouseover="this.style.background='#dc2626'"
+                                onmouseout="this.style.background='var(--danger)'">
+                            <i class="fas fa-trash"></i> Supprimer
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Close modal on outside click
+        document.getElementById('projectModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeProjectModal();
+            }
+        });
+        
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeProjectModal();
+            }
+        });
+
+        // === ANALYTICS CHARTS FUNCTIONS ===
+        Chart.register(ChartDataLabels);
+
+        // Configuration globale pour optimiser l'affichage des graphiques temporels
+        Chart.defaults.interaction.intersect = false;
+        Chart.defaults.interaction.mode = 'index';
+
+        let analyticsCharts = {};
+
+        function initializeAnalyticsCharts() {
+            // Timeline Chart
+            const timelineCtx = document.getElementById('timelineChart');
+            if (timelineCtx) {
+                analyticsCharts.timeline = new Chart(timelineCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul'],
+                        datasets: [{
+                            label: 'Dépenses Réelles',
+                            data: [12000, 19000, 15000, 25000, 22000, 30000, 28000],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }, {
+                            label: 'Budget Prévu',
+                            data: [15000, 20000, 18000, 24000, 25000, 28000, 30000],
+                            borderColor: '#000000',
+                            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                            fill: false,
+                            borderDash: [5, 5]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toLocaleString() + '€';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Gauge Chart (using doughnut with custom center text)
+            const gaugeCtx = document.getElementById('gaugeChart');
+            if (gaugeCtx) {
+                analyticsCharts.gauge = new Chart(gaugeCtx, {
+                    type: 'doughnut',
+                    data: {
+                        datasets: [{
+                            data: [85, 15],
+                            backgroundColor: ['#10b981', '#e5e7eb'],
+                            borderWidth: 0,
+                            circumference: 180,
+                            rotation: 270,
+                            cutout: '75%'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Heatmap Chart (using bar chart with Matrix layout simulation)
+            const heatmapCtx = document.getElementById('heatmapChart');
+            if (heatmapCtx) {
+                analyticsCharts.heatmap = new Chart(heatmapCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+                        datasets: [{
+                            label: 'Semaine 1',
+                            data: [300, 150, 400, 200, 500, 100, 50],
+                            backgroundColor: [
+                                'rgba(16, 185, 129, 0.3)',
+                                'rgba(16, 185, 129, 0.1)',
+                                'rgba(16, 185, 129, 0.8)',
+                                'rgba(16, 185, 129, 0.4)',
+                                'rgba(16, 185, 129, 1)',
+                                'rgba(16, 185, 129, 0.2)',
+                                'rgba(16, 185, 129, 0.1)'
+                            ],
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Predictive Chart
+            const predictiveCtx = document.getElementById('predictiveChart');
+            if (predictiveCtx) {
+                analyticsCharts.predictive = new Chart(predictiveCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct'],
+                        datasets: [{
+                            label: 'Historique',
+                            data: [25000, 22000, 30000, 28000, null, null, null],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            pointBackgroundColor: '#10b981'
+                        }, {
+                            label: 'Prédiction IA',
+                            data: [null, null, null, 28000, 30500, 33000, 35500],
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            borderDash: [10, 5],
+                            pointBackgroundColor: '#f59e0b'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toLocaleString() + '€';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Comparison Chart
+            const comparisonCtx = document.getElementById('comparisonChart');
+            if (comparisonCtx) {
+                analyticsCharts.comparison = new Chart(comparisonCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun'],
+                        datasets: [{
+                            label: 'Cette Année',
+                            data: [12000, 19000, 15000, 25000, 22000, 30000],
+                            backgroundColor: '#10b981',
+                            borderRadius: 6
+                        }, {
+                            label: 'Année Précédente',
+                            data: [10000, 16000, 18000, 20000, 24000, 26000],
+                            backgroundColor: '#6b7280',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toLocaleString() + '€';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Sparkline for KPI
+            const sparklineCtx = document.getElementById('trendSparkline');
+            if (sparklineCtx) {
+                new Chart(sparklineCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['', '', '', '', '', '', ''],
+                        datasets: [{
+                            data: [10, 25, 15, 30, 20, 35, 25],
+                            borderColor: '#10b981',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: false
+                            },
+                            y: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Analytics Functions
+        function updateTimeRange(range) {
+            // Updating time range to: range
+            if (analyticsCharts.timeline) {
+                // Update chart data based on range
+                analyticsCharts.timeline.update();
+            }
+        }
+
+        function refreshAnalytics() {
+            // Add loading animation
+            document.querySelectorAll('.kpi-value').forEach(el => {
+                el.style.opacity = '0.5';
+                el.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            });
+
+            // Simulate refresh
+            setTimeout(() => {
+                document.querySelectorAll('.kpi-value').forEach((el, index) => {
+                    el.style.opacity = '1';
+                    const values = ['+15.2%', '82%', '2', '+18.7%'];
+                    el.innerHTML = values[index] || '+12.5%';
+                });
+
+                // Reinitialize charts
+                Object.values(analyticsCharts).forEach(chart => {
+                    if (chart) chart.update();
+                });
+            }, 2000);
+        }
+
+        function exportAnalytics() {
+            // Show loading state
+            const btn = event.target;
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération...';
+            btn.disabled = true;
+
+            // Trigger download
+            window.location.href = '/api/export/pdf';
+            
+            // Reset button after delay
+            setTimeout(() => {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }, 3000);
+        }
+
+        function configureAlerts() {
+            // Create modal for alert configuration
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'block';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Configuration des Alertes</h2>
+                        <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label">Seuil d'alerte budget (%)</label>
+                            <input type="range" min="50" max="100" value="80" class="form-range" id="budgetThreshold">
+                            <span id="thresholdValue">80%</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" checked> Alertes par email
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" checked> Alertes en temps réel
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox"> Rapport hebdomadaire
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline" onclick="this.closest('.modal').remove()">Annuler</button>
+                        <button class="btn btn-primary" onclick="saveAlertConfig()">Sauvegarder</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Update threshold display
+            document.getElementById('budgetThreshold').addEventListener('input', function() {
+                document.getElementById('thresholdValue').textContent = this.value + '%';
+            });
+        }
+
+        function saveAlertConfig() {
+            // Simulate saving configuration
+            alert('Configuration sauvegardée! 💾');
+            document.querySelector('.modal').remove();
+        }
+
+        // Dashboard Customization
+        function enableDashboardCustomization() {
+            const cards = document.querySelectorAll('.kpi-card, .card');
+            cards.forEach(card => {
+                card.draggable = true;
+                card.style.cursor = 'move';
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragover', handleDragOver);
+                card.addEventListener('drop', handleDrop);
+            });
+        }
+
+        function handleDragStart(e) {
+            e.dataTransfer.setData('text/html', e.target.outerHTML);
+            e.dataTransfer.effectAllowed = 'move';
+            e.target.style.opacity = '0.5';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const draggedHTML = e.dataTransfer.getData('text/html');
+            const targetElement = e.target.closest('.kpi-card, .card');
+            
+            if (targetElement) {
+                targetElement.insertAdjacentHTML('beforebegin', draggedHTML);
+                targetElement.remove();
+            }
+        }
+
+        // Initialize dashboard customization on analytics page load
+        function initializeDashboardFeatures() {
+            // Add customization toggle
+            const analyticsHeader = document.querySelector('#analytics .page-header');
+            if (analyticsHeader) {
+                const customizeBtn = document.createElement('button');
+                customizeBtn.className = 'btn btn-outline';
+                customizeBtn.innerHTML = '<i class="fas fa-edit"></i> Personnaliser';
+                customizeBtn.onclick = toggleCustomization;
+                analyticsHeader.querySelector('.page-actions').appendChild(customizeBtn);
+            }
+        }
+
+        function toggleCustomization() {
+            const isCustomizing = document.body.classList.contains('customizing');
+            
+            if (isCustomizing) {
+                document.body.classList.remove('customizing');
+                document.querySelectorAll('.kpi-card, .card').forEach(card => {
+                    card.draggable = false;
+                    card.style.cursor = '';
+                    card.style.opacity = '';
+                });
+                event.target.innerHTML = '<i class="fas fa-edit"></i> Personnaliser';
+            } else {
+                document.body.classList.add('customizing');
+                enableDashboardCustomization();
+                event.target.innerHTML = '<i class="fas fa-save"></i> Terminer';
+            }
+        }
+
+        // Enhanced showPage function to handle analytics
+        const originalShowPage = window.showPage;
+        window.showPage = function(page) {
+            originalShowPage(page);
+            
+            // Initialize analytics charts when analytics page is shown
+            if (page === 'analytics') {
+                setTimeout(() => {
+                    initializeAnalyticsCharts();
+                    initializeDashboardFeatures();
+                }, 100);
+            }
+        };
+        
+        // === GESTION DES DÉPENSES (CRUD) ===
+        
+        let currentEditingExpenseId = null;
+        
+        function editExpense(expenseId, description, amount) {
+            currentEditingExpenseId = expenseId;
+            
+            // Remplir le formulaire avec les valeurs actuelles
+            document.getElementById('editExpenseDescription').value = description;
+            document.getElementById('editExpenseAmount').value = amount;
+            
+            // Afficher le modal
+            document.getElementById('editExpenseModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeEditExpenseModal() {
+            document.getElementById('editExpenseModal').classList.remove('show');
+            document.body.style.overflow = '';
+            currentEditingExpenseId = null;
+            
+            // Réinitialiser le formulaire
+            document.getElementById('editExpenseForm').reset();
+        }
+        
+        async function saveExpenseChanges(event) {
+            event.preventDefault();
+            
+            if (!currentProjectId || !currentEditingExpenseId) {
+                alert('Erreur: Projet ou dépense non identifiée');
+                return;
+            }
+            
+            const description = document.getElementById('editExpenseDescription').value.trim();
+            const montant = parseFloat(document.getElementById('editExpenseAmount').value);
+            
+            // Validation côté client
+            if (!description) {
+                alert('La description est requise');
+                return;
+            }
+            
+            if (!montant || montant <= 0) {
+                alert('Le montant doit être positif');
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('montant', montant);
+                formData.append('description', description);
+                
+                const response = await fetch(`/modifier_depense/${currentProjectId}/${currentEditingExpenseId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    // Redirection automatique gérée par la route Flask
+                    window.location.reload();
+                } else {
+                    const data = await response.json();
+                    alert('Erreur: ' + (data.message || 'Impossible de modifier la dépense'));
+                }
+            } catch (error) {
+                console.error('Erreur lors de la modification:', error);
+                alert('Erreur de connexion');
+            }
+        }
+        
+        function deleteExpense(expenseId) {
+            if (!currentProjectId) {
+                alert('Erreur: Projet non identifié');
+                return;
+            }
+            
+            // Demander confirmation
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cette dépense ?')) {
+                return;
+            }
+            
+            // Créer un formulaire caché et le soumettre
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/supprimer_depense/${currentProjectId}/${expenseId}`;
+            form.style.display = 'none';
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+        
+        // Fermer le modal d'édition en cliquant à l'extérieur
+        document.getElementById('editExpenseModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeEditExpenseModal();
+            }
+        });
+        
+        // Fermer le modal d'édition avec la touche Échap
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.getElementById('editExpenseModal').classList.contains('show')) {
+                closeEditExpenseModal();
+            }
+        });
+
+        
+        // ==========================================
+        // GESTION DES CATÉGORIES
+        // ==========================================
+        
+        let currentCategoryType = 'projet';
+        
+        function openCategoryManager(type) {
+            currentCategoryType = type;
+            document.getElementById('categoryModalTitle').textContent = `Gestion des Catégories - ${type.charAt(0).toUpperCase() + type.slice(1)}s`;
+            document.getElementById('categoryManagerModal').style.display = 'flex';
+            loadCategoriesForManager();
+        }
+        
+        function closeCategoryManager() {
+            document.getElementById('categoryManagerModal').style.display = 'none';
+        }
+        
+        async function loadCategoriesForManager() {
+            try {
+                const response = await fetch(`/api/categories?type=${currentCategoryType}`);
+                const data = await response.json();
+                
+                const categoriesList = document.getElementById('categoriesList');
+                categoriesList.innerHTML = '';
+                
+                data.categories.forEach(category => {
+                    const categoryElement = document.createElement('div');
+                    categoryElement.style.cssText = `
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 12px;
+                        margin-bottom: 8px;
+                        background: ${category.couleur};
+                        border: 1px solid var(--border);
+                        border-radius: 8px;
+                    `;
+                    
+                    categoryElement.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 16px; height: 16px; background: ${category.couleur}; border: 1px solid #ccc; border-radius: 4px;"></div>
+                            <div>
+                                <strong>${category.nom}</strong>
+                                ${category.description ? `<br><small style="color: var(--gray-600);">${category.description}</small>` : ''}
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="editCategory(${category.id}, '${category.nom}', '${category.couleur}', '${category.description || ''}')" 
+                                    style="padding: 4px 8px; background: var(--white); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteCategory(${category.id})" 
+                                    style="padding: 4px 8px; background: var(--danger); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    
+                    categoriesList.appendChild(categoryElement);
+                });
+            } catch (error) {
+                console.error('Erreur lors du chargement des catégories:', error);
+                alert('Erreur lors du chargement des catégories');
+            }
+        }
+        
+        async function addCategory(event) {
+            event.preventDefault();
+            
+            const nom = document.getElementById('categoryName').value;
+            const couleur = document.getElementById('categoryColorText').value;
+            const description = document.getElementById('categoryDescription').value;
+            
+            if (!nom || !couleur) {
+                alert('Veuillez remplir le nom et la couleur');
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('nom', nom);
+                formData.append('couleur', couleur);
+                formData.append('type', currentCategoryType);
+                if (description) {
+                    formData.append('description', description);
+                }
+                
+                const response = await fetch('/ajouter_categorie', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    document.getElementById('addCategoryForm').reset();
+                    document.getElementById('categoryColor').value = '#E3F2FD';
+                    document.getElementById('categoryColorText').value = '#E3F2FD';
+                    await loadAllCategories(); // Recharger le cache
+                    await loadCategoriesForManager();
+                    await loadCategorySelect('projectCategorySelect', 'projet');
+                    await loadCategorySelect('expenseCategorySelect', 'depense');
+                } else {
+                    const error = await response.json();
+                    alert(error.message || 'Erreur lors de l\'ajout de la catégorie');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de l\'ajout de la catégorie');
+            }
+        }
+        
+        function updateColorPicker() {
+            const colorText = document.getElementById('categoryColorText').value;
+            if (colorText.match(/^#[0-9A-F]{6}$/i)) {
+                document.getElementById('categoryColor').value = colorText;
+            }
+        }
+        
+        // Sync color picker with text input
+        document.addEventListener('DOMContentLoaded', function() {
+            const colorPicker = document.getElementById('categoryColor');
+            if (colorPicker) {
+                colorPicker.addEventListener('input', function() {
+                    document.getElementById('categoryColorText').value = this.value.toUpperCase();
+                });
+            }
+        });
+        
+        async function loadCategorySelect(selectId, type) {
+            try {
+                const response = await fetch(`/api/categories?type=${type}`);
+                const data = await response.json();
+                
+                const select = document.getElementById(selectId);
+                if (!select) return;
+                
+                // Garder l'option par défaut
+                const defaultOption = select.querySelector('option[value=""]');
+                select.innerHTML = '';
+                if (defaultOption) {
+                    select.appendChild(defaultOption);
+                }
+                
+                // Ajouter les catégories
+                data.categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.id;
+                    option.textContent = category.nom;
+                    option.style.background = category.couleur;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erreur lors du chargement des catégories:', error);
+            }
+        }
+        
+        // Cache pour les catégories
+        let categoriesCache = new Map();
+        
+        async function loadAllCategories() {
+            try {
+                const response = await fetch('/api/categories');
+                const data = await response.json();
+                
+                categoriesCache.clear();
+                data.categories.forEach(category => {
+                    categoriesCache.set(category.id, category);
+                });
+                
+                return data.categories;
+            } catch (error) {
+                console.error('Erreur lors du chargement des catégories:', error);
+                return [];
+            }
+        }
+        
+        function getCategoryColor(categorieId) {
+            if (!categorieId) {
+                return '#6b7280';
+            }
+            
+            const category = categoriesCache.get(parseInt(categorieId));
+            return category ? category.couleur : '#6b7280'; // Couleur par défaut si catégorie non trouvée
+        }
+        
+        // Variables globales pour le graphique temporel
+        let timelineChart = null;
+        let projectTimelineModalChart = null;
+        let timelineMode = 'both';
+        let historiqueData = {};
+        
+        // Charger les catégories au démarrage
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCategorySelect('projectCategorySelect', 'projet');
+            loadCategorySelect('expenseCategorySelect', 'depense');
+            loadAllCategories(); // Charger le cache des catégories
+            
+            // Initialiser le graphique temporel seulement si on est sur le dashboard
+            const dashboardPage = document.getElementById('dashboard');
+            if (dashboardPage && dashboardPage.classList.contains('active')) {
+                // Délai pour s'assurer que tous les scripts sont chargés
+                setTimeout(() => {
+                    initializeTimelineChart();
+                }, 500);
+            }
+        });
+        
+        async function initializeTimelineChart() {
+            try {
+                const response = await fetch('/api/historique_projets');
+                historiqueData = await response.json();
+                // Données historique reçues
+                createTimelineChart();
+            } catch (error) {
+                console.error('Erreur lors du chargement de l\'historique:', error);
+            }
+        }
+        
+        function createTimelineChart() {
+            const ctx = document.getElementById('projectTimelineChart');
+            if (!ctx) {
+                // Canvas projectTimelineChart non trouvé
+                return;
+            }
+            
+            if (timelineChart) {
+                timelineChart.destroy();
+            }
+            
+            // Vérifier s'il y a des données
+            if (!historiqueData || Object.keys(historiqueData).length === 0) {
+                // Pas de données d'historique
+                ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+                ctx.getContext('2d').fillStyle = '#6b7280';
+                ctx.getContext('2d').font = '16px Inter';
+                ctx.getContext('2d').textAlign = 'center';
+                ctx.getContext('2d').fillText('Aucune donnée d\'historique', ctx.width / 2, ctx.height / 2);
+                return;
+            }
+            
+            const datasets = [];
+            
+            // Parcourir chaque projet et créer les datasets
+            // Création des datasets pour les projets
+            Object.keys(historiqueData).forEach(projetId => {
+                const projetData = historiqueData[projetId];
+                const projet = projetData.projet;
+                const historique = projetData.historique;
+                
+                // Projet avec points d'historique
+                
+                if (historique.length === 0) {
+                    // Pas d'historique pour le projet
+                    return;
+                }
+                
+                // Couleur du projet basée sur sa catégorie
+                const couleur = projet.categorie_couleur || '#6b7280';
+                
+                // Couleur pour le projet
+                
+                // Dataset pour les dépenses
+                if (timelineMode === 'budget_depense' || timelineMode === 'both') {
+                    datasets.push({
+                        label: `${projet.nom} - Dépenses`,
+                        data: historique.map(h => ({
+                            x: new Date(h.date_snapshot),
+                            y: h.budget_depense
+                        })),
+                        borderColor: couleur,
+                        backgroundColor: couleur + '20', // 20% opacity
+                        fill: false,
+                        tension: 0.1,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    });
+                }
+                
+                // Dataset pour le budget alloué (ligne pointillée)
+                if (timelineMode === 'budget_alloue' || timelineMode === 'both') {
+                    datasets.push({
+                        label: `${projet.nom} - Budget`,
+                        data: historique.map(h => ({
+                            x: new Date(h.date_snapshot),
+                            y: h.budget_alloue
+                        })),
+                        borderColor: couleur,
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        fill: false,
+                        tension: 0.1,
+                        pointRadius: 2,
+                        pointHoverRadius: 4
+                    });
+                }
+            });
+            
+            timelineChart = new Chart(ctx, {
+                type: 'line',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day',
+                                displayFormats: {
+                                    day: 'MMM DD'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            },
+                            ticks: {
+                                source: 'auto',
+                                autoSkip: true,
+                                maxTicksLimit: 10
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Montant (€)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toFixed(0) + '€';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.parsed.y;
+                                    return `${label}: ${value.toFixed(2)}€`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function setTimelineMode(mode) {
+            timelineMode = mode;
+            
+            // Mettre à jour les boutons
+            document.querySelectorAll('#timelineControls .btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`btn-${mode === 'both' ? 'both' : mode === 'budget_depense' ? 'depense' : 'budget'}`).classList.add('active');
+            
+            // Recréer le graphique
+            createTimelineChart();
+        }
+        
+        async function refreshTimelineChart() {
+            await initializeTimelineChart();
+        }
+        
+        function forceInitTimelineChart() {
+            // Force init timeline chart
+            setTimeout(() => {
+                initializeTimelineChart();
+            }, 200);
+        }
+        
+        async function createProjectTimelineModalChart(projetId) {
+            const ctx = document.getElementById('projectTimelineModalChart');
+            if (!ctx) return;
+            
+            if (projectTimelineModalChart) {
+                projectTimelineModalChart.destroy();
+            }
+            
+            try {
+                // Récupérer l'historique du projet spécifique
+                const response = await fetch('/api/historique_projets');
+                const historiqueData = await response.json();
+                
+                const projetData = historiqueData[projetId];
+                if (!projetData || !projetData.historique || projetData.historique.length === 0) {
+                    // Afficher un message si pas d'historique
+                    ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+                    ctx.getContext('2d').fillStyle = '#6b7280';
+                    ctx.getContext('2d').font = '14px Inter';
+                    ctx.getContext('2d').textAlign = 'center';
+                    ctx.getContext('2d').fillText('Aucun historique disponible', ctx.width / 2, ctx.height / 2);
+                    return;
+                }
+                
+                const projet = projetData.projet;
+                const historique = projetData.historique;
+                const couleur = projet.categorie_couleur || '#6b7280';
+                
+                const datasets = [{
+                    label: 'Dépenses',
+                    data: historique.map(h => ({
+                        x: new Date(h.date_snapshot),
+                        y: h.budget_depense
+                    })),
+                    borderColor: couleur,
+                    backgroundColor: couleur + '20',
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }, {
+                    label: 'Budget alloué',
+                    data: historique.map(h => ({
+                        x: new Date(h.date_snapshot),
+                        y: h.budget_alloue
+                    })),
+                    borderColor: couleur,
+                    backgroundColor: 'transparent',
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 2,
+                    pointHoverRadius: 4
+                }];
+                
+                projectTimelineModalChart = new Chart(ctx, {
+                    type: 'line',
+                    data: { datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'day',
+                                    displayFormats: {
+                                        day: 'MMM DD'
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Date',
+                                    font: { size: 12 }
+                                },
+                                ticks: {
+                                    source: 'auto',
+                                    autoSkip: true,
+                                    maxTicksLimit: 8
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Montant (€)',
+                                    font: { size: 12 }
+                                },
+                                ticks: {
+                                    font: { size: 10 },
+                                    callback: function(value) {
+                                        return value.toFixed(0) + '€';
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    font: { size: 11 }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.dataset.label || '';
+                                        const value = context.parsed.y;
+                                        return `${label}: ${value.toFixed(2)}€`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Erreur lors de la création du graphique temporel de projet:', error);
+            }
+        }
+
+    </script>
+    
+    <!-- Modal de gestion des catégories -->
+    <div id="categoryManagerModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 id="categoryModalTitle">Gestion des Catégories</h2>
+                <button class="modal-close" onclick="closeCategoryManager()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Formulaire ajout catégorie -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-header">
+                        <h3>Ajouter une Catégorie</h3>
+                    </div>
+                    <div class="card-content">
+                        <form id="addCategoryForm" onsubmit="addCategory(event)">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Nom</label>
+                                    <input type="text" id="categoryName" class="form-input" placeholder="Ex: Développement Web" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Couleur</label>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <input type="color" id="categoryColor" value="#E3F2FD" style="width: 50px; height: 40px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer;">
+                                        <input type="text" id="categoryColorText" class="form-input" value="#E3F2FD" placeholder="#FFFFFF" style="flex: 1;" oninput="updateColorPicker()">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Description</label>
+                                    <input type="text" id="categoryDescription" class="form-input" placeholder="Description optionnelle">
+                                </div>
+                                <div style="display: flex; align-items: end;">
+                                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                                        <i class="fas fa-plus"></i>
+                                        Ajouter Catégorie
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Liste des catégories existantes -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Catégories Existantes</h3>
+                    </div>
+                    <div class="card-content">
+                        <div id="categoriesList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Widget Dashboard Module -->
+    <script type="module">
+        import { initFlooseDashboard } from "{{ url_for('static', filename='js/dashboard/DashboardIntegration.js') }}";
+
+        let dashboardInstance = null;
+        let isWidgetDashboardActive = false;
+
+        // Toggle between classic and widget dashboard
+        window.toggleWidgetDashboard = async function() {
+            const container = document.getElementById('widgetDashboardContainer');
+            const classicContent = document.getElementById('classicDashboardContent');
+            const toggleLabel = document.getElementById('toggleDashboardLabel');
+            const toggleBtn = document.getElementById('toggleDashboardBtn');
+
+            if (isWidgetDashboardActive) {
+                // Switch to classic view
+                container.style.display = 'none';
+                classicContent.style.display = 'block';
+                toggleLabel.textContent = 'Dashboard Widgets';
+                toggleBtn.classList.remove('btn-primary');
+                toggleBtn.classList.add('btn-secondary');
+                isWidgetDashboardActive = false;
+            } else {
+                // Switch to widget dashboard
+                container.style.display = 'block';
+                classicContent.style.display = 'none';
+                toggleLabel.textContent = 'Vue Classique';
+                toggleBtn.classList.remove('btn-secondary');
+                toggleBtn.classList.add('btn-primary');
+                isWidgetDashboardActive = true;
+
+                // Initialize dashboard if not already done
+                if (!dashboardInstance) {
+                    try {
+                        const result = await initFlooseDashboard('widgetDashboardContainer', {
+                            debug: false
+                        });
+                        dashboardInstance = result;
+                    } catch (error) {
+                        console.error('Failed to initialize widget dashboard:', error);
+                        container.innerHTML = '<div class="card"><div class="card-body"><p>Erreur lors du chargement du dashboard widgets.</p></div></div>';
+                    }
+                }
+            }
+        };
+
+        // Check localStorage preference
+        if (localStorage.getItem('floose_widget_dashboard_active') === 'true') {
+            window.toggleWidgetDashboard();
+        }
+    </script>
+</body>
+</html>

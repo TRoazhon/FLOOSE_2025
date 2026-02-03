@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard - Floose</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Analytics Dashboard Specific Styles */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-8);
+            padding: var(--space-6);
+            background: var(--color-surface);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border-light);
+        }
+
+        .dashboard-title {
+            font-size: var(--text-display-sm);
+            font-weight: var(--font-bold);
+            color: var(--color-text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .dashboard-subtitle {
+            color: var(--color-text-secondary);
+            font-size: var(--text-base);
+            margin-top: var(--space-1);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: var(--space-3);
+            align-items: center;
+        }
+
+        .widgets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: var(--space-6);
+            margin-bottom: var(--space-8);
+        }
+
+        .widget {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border-light);
+            border-radius: var(--radius-xl);
+            padding: var(--space-6);
+            box-shadow: var(--shadow-sm);
+            transition: all var(--transition-base);
+        }
+
+        .widget:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .widget-large {
+            grid-column: span 2;
+        }
+
+        .widget-full {
+            grid-column: 1 / -1;
+        }
+
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-5);
+        }
+
+        .widget-title {
+            font-size: var(--text-base);
+            font-weight: var(--font-semibold);
+            color: var(--color-text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .widget-icon {
+            font-size: var(--text-lg);
+            color: var(--color-primary);
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: var(--space-4);
+        }
+
+        .kpi-item {
+            text-align: center;
+            padding: var(--space-5);
+            background: linear-gradient(135deg, var(--color-slate-900) 0%, var(--color-slate-800) 100%);
+            color: white;
+            border-radius: var(--radius-xl);
+            transition: transform var(--transition-fast);
+        }
+
+        .kpi-item:hover {
+            transform: scale(1.02);
+        }
+
+        .kpi-value {
+            font-size: var(--text-xl);
+            font-weight: var(--font-bold);
+            margin-bottom: var(--space-1);
+        }
+
+        .kpi-label {
+            font-size: var(--text-xs);
+            opacity: 0.85;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .numbers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: var(--space-4);
+        }
+
+        .number-item {
+            text-align: center;
+            padding: var(--space-4);
+            background: var(--color-slate-50);
+            border-radius: var(--radius-lg);
+        }
+
+        .number-value {
+            font-size: var(--text-xl);
+            font-weight: var(--font-bold);
+            color: var(--color-text-primary);
+            margin-bottom: var(--space-1);
+        }
+
+        .number-label {
+            font-size: var(--text-xs);
+            color: var(--color-text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-4);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-3);
+            border-left: 3px solid;
+        }
+
+        .status-success {
+            background: var(--color-success-light);
+            border-left-color: var(--color-success);
+        }
+
+        .status-warning {
+            background: var(--color-warning-light);
+            border-left-color: var(--color-warning);
+        }
+
+        .status-danger {
+            background: var(--color-danger-light);
+            border-left-color: var(--color-danger);
+        }
+
+        .status-icon {
+            font-size: var(--text-lg);
+        }
+
+        .status-text {
+            flex: 1;
+            font-size: var(--text-sm);
+            font-weight: var(--font-medium);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 280px;
+        }
+
+        .chart-small {
+            height: 180px;
+        }
+
+        .prediction-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-4);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-3);
+            border: 1px solid var(--color-border);
+            transition: all var(--transition-fast);
+        }
+
+        .prediction-item:hover {
+            background: var(--color-slate-50);
+        }
+
+        .risk-high {
+            border-color: var(--color-danger);
+            background: var(--color-danger-light);
+        }
+
+        .risk-medium {
+            border-color: var(--color-warning);
+            background: var(--color-warning-light);
+        }
+
+        .risk-low {
+            border-color: var(--color-success);
+            background: var(--color-success-light);
+        }
+
+        .risk-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: var(--radius-full);
+            flex-shrink: 0;
+        }
+
+        .risk-indicator.high { background: var(--color-danger); }
+        .risk-indicator.medium { background: var(--color-warning); }
+        .risk-indicator.low { background: var(--color-success); }
+
+        .project-info {
+            flex: 1;
+        }
+
+        .project-name {
+            font-weight: var(--font-semibold);
+            font-size: var(--text-sm);
+            margin-bottom: var(--space-1);
+        }
+
+        .project-details {
+            font-size: var(--text-xs);
+            color: var(--color-text-tertiary);
+        }
+
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+            margin-top: var(--space-3);
+        }
+
+        .heatmap-cell {
+            aspect-ratio: 1;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--text-xs);
+            font-weight: var(--font-semibold);
+            color: white;
+            transition: transform var(--transition-fast);
+        }
+
+        .heatmap-cell:hover {
+            transform: scale(1.1);
+        }
+
+        .velocity-chart {
+            display: flex;
+            align-items: end;
+            gap: var(--space-2);
+            height: 120px;
+            margin: var(--space-5) 0;
+            padding-bottom: var(--space-6);
+        }
+
+        .velocity-bar {
+            flex: 1;
+            background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+            min-height: 20px;
+            position: relative;
+            transition: transform var(--transition-fast);
+        }
+
+        .velocity-bar:hover {
+            transform: scaleY(1.05);
+        }
+
+        .velocity-label {
+            position: absolute;
+            bottom: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: var(--text-xs);
+            color: var(--color-text-tertiary);
+        }
+
+        .forecast-timeline {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: var(--space-4);
+            margin-top: var(--space-4);
+        }
+
+        .forecast-item {
+            text-align: center;
+            padding: var(--space-4);
+            border-radius: var(--radius-lg);
+            background: var(--color-slate-50);
+            transition: all var(--transition-fast);
+        }
+
+        .forecast-item:hover {
+            transform: translateY(-2px);
+        }
+
+        .forecast-safe {
+            background: var(--color-success-light);
+        }
+
+        .forecast-warning {
+            background: var(--color-warning-light);
+        }
+
+        .forecast-month {
+            font-size: var(--text-xs);
+            color: var(--color-text-tertiary);
+            margin-bottom: var(--space-1);
+        }
+
+        .forecast-amount {
+            font-size: var(--text-lg);
+            font-weight: var(--font-bold);
+            margin-bottom: var(--space-1);
+        }
+
+        .forecast-status {
+            font-size: var(--text-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: var(--font-medium);
+        }
+
+        .efficiency-list {
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .efficiency-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-2);
+            background: var(--color-slate-50);
+            transition: background var(--transition-fast);
+        }
+
+        .efficiency-item:hover {
+            background: var(--color-slate-100);
+        }
+
+        .efficiency-color {
+            width: 12px;
+            height: 12px;
+            border-radius: var(--radius-full);
+            flex-shrink: 0;
+        }
+
+        .efficiency-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .efficiency-name {
+            font-weight: var(--font-semibold);
+            font-size: var(--text-sm);
+            margin-bottom: var(--space-1);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .efficiency-progress {
+            font-size: var(--text-xs);
+            color: var(--color-text-tertiary);
+        }
+
+        .efficiency-score {
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+            font-weight: var(--font-semibold);
+            font-size: var(--text-sm);
+        }
+
+        .score-excellent { color: var(--color-success); }
+        .score-good { color: var(--color-primary); }
+        .score-warning { color: var(--color-warning); }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 120px;
+            color: var(--color-text-tertiary);
+            font-size: var(--text-sm);
+        }
+
+        .loading::before {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--color-border);
+            border-top-color: var(--color-primary);
+            border-radius: var(--radius-full);
+            animation: spin 1s linear infinite;
+            margin-right: var(--space-3);
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .widget-large {
+                grid-column: span 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-header {
+                flex-direction: column;
+                gap: var(--space-4);
+                text-align: center;
+            }
+
+            .widgets-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header-actions {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="main-content" style="margin-top: 0; padding-top: var(--space-6);">
+        <div class="container">
+            <!-- Header -->
+            <div class="dashboard-header animate-fadeInUp">
+                <div>
+                    <h1 class="dashboard-title">
+                        <i class="fas fa-chart-line"></i>
+                        Analytics Dashboard
+                    </h1>
+                    <p class="dashboard-subtitle">Vue d'ensemble complete de la performance financiere</p>
+                </div>
+                <div class="header-actions">
+                    <a href="/" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i>
+                        Retour
+                    </a>
+                    <button class="btn btn-outline" onclick="exportToPDF()">
+                        <i class="fas fa-file-pdf"></i>
+                        Exporter
+                    </button>
+                    <button class="btn btn-primary" onclick="refreshDashboard()">
+                        <i class="fas fa-sync-alt"></i>
+                        Actualiser
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPIs Avances -->
+            <div class="widgets-grid">
+                <div class="widget widget-full">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i class="fas fa-tachometer-alt widget-icon"></i>
+                            KPIs Avances
+                        </h3>
+                    </div>
+                    <div class="kpi-grid" id="advanced-kpis">
+                        <div class="loading">Chargement...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Premiere ligne de widgets -->
+            <div class="widgets-grid stagger-animation">
+                <!-- Chiffres Cles -->
+                <div class="widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i class="fas fa-calculator widget-icon"></i>
+                            Chiffres Cles
+                        </h3>
+                    </div>
+                    <div class="numbers-grid" id="quick-numbers">
+                        <div class="loading">Chargement...</div>
+                    </div>
+                </div>
+
+                <!-- Etat du Systeme -->
+                <div class="widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i class="fas fa-traffic-light widget-icon"></i>
+                            Etat du Systeme
+                        </h3>
+                    </div>
+                    <div id="status-indicators">
+                        <div class="loading">Chargement...</div>
+                    </div>
+                </div>
+
+                <!-- Sante Financiere -->
+                <div class="widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i class="fas fa-heartbeat widget-icon"></i>
+                            Sante Financiere
+                        </h3>
+                    </div>
+                    <div id="financial-health">
+                        <div class="loading">Chargement...</div>
+                    </div>
+                </div>
+
+                <!-- Predictions Budgetaires -->
+                <div class="widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i class="fas fa-magic widget-icon"></i>
+                            Predictions & Risques
+                        </h3>
+                    </div>
+                    <div id="predictions-data">
+                        <div class="loading">Chargement...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deuxieme ligne - Graphiques principaux -->
+            <div class="widgets-grid">
+                <!-- Timeline des depenses -->
+                <div class="widget widget-large">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i class="fas fa-chart-area widget-icon"></i>
+                            Timeline des Depenses (30 jours)
+                        </h3>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Heatmap -->
+                <div class="widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i class="fas fa-th widget-icon"></i>
+                            Heatmap Categories
+                        </h3>
+                    </div>
+                    <div id="heatmap-container">
+                        <div class="loading">Chargement...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Troisieme ligne - Analytics detailles -->
+            <div class="widgets-grid">
+                <!-- Velocite de depenses -->
+                <div class="widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i class="fas fa-tachometer-alt widget-icon"></i>
+                            Velocite de Depenses
+                        </h3>
+                    </div>
+                    <div id="spending-velocity">
+                        <div class="loading">Chargement...</div>
+                    </div>
+                </div>
+
+                <!-- Previsions Cash-Flow -->
+                <div class="widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i class="fas fa-chart-line widget-icon"></i>
+                            Previsions Tresorerie
+                        </h3>
+                    </div>
+                    <div id="cash-flow-forecast">
+                        <div class="loading">Chargement...</div>
+                    </div>
+                </div>
+
+                <!-- Efficacite des Projets -->
+                <div class="widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i class="fas fa-chart-bar widget-icon"></i>
+                            Efficacite Projets
+                        </h3>
+                    </div>
+                    <div id="project-efficiency">
+                        <div class="loading">Chargement...</div>
+                    </div>
+                </div>
+
+                <!-- Repartition par Categories -->
+                <div class="widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i class="fas fa-pie-chart widget-icon"></i>
+                            Repartition Categories
+                        </h3>
+                    </div>
+                    <div class="chart-container chart-small">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quatrieme ligne - Alertes et tendances -->
+            <div class="widgets-grid">
+                <!-- Alertes & Opportunites -->
+                <div class="widget widget-large">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i class="fas fa-bell widget-icon"></i>
+                            Alertes & Opportunites
+                        </h3>
+                    </div>
+                    <div id="alerts-summary">
+                        <div class="loading">Chargement...</div>
+                    </div>
+                </div>
+
+                <!-- Tendances -->
+                <div class="widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i class="fas fa-chart-line widget-icon"></i>
+                            Tendances
+                        </h3>
+                    </div>
+                    <div id="trending-data">
+                        <div class="loading">Chargement...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Configuration des graphiques
+        Chart.defaults.font.family = 'Inter, -apple-system, sans-serif';
+        Chart.defaults.font.size = 12;
+        Chart.defaults.color = '#525252';
+
+        // Variables globales pour les graphiques
+        let categoryChart, timelineChart;
+
+        // Fonction principale de chargement
+        async function loadDashboard() {
+            try {
+                await Promise.all([
+                    loadAdvancedKPIs(),
+                    loadQuickNumbers(),
+                    loadStatusIndicators(),
+                    loadFinancialHealth(),
+                    loadPredictions(),
+                    loadTimeline(),
+                    loadHeatmap(),
+                    loadSpendingVelocity(),
+                    loadCashFlowForecast(),
+                    loadProjectEfficiency(),
+                    loadCategoryChart(),
+                    loadTrending(),
+                    loadAlertsData()
+                ]);
+            } catch (error) {
+                console.error('Erreur lors du chargement du dashboard:', error);
+            }
+        }
+
+        // Chargement des KPIs avances
+        async function loadAdvancedKPIs() {
+            try {
+                const response = await fetch('/api/analytics/kpis');
+                const data = await response.json();
+
+                const container = document.getElementById('advanced-kpis');
+                container.innerHTML = `
+                    <div class="kpi-item">
+                        <div class="kpi-value">${data.kpis.monthly_trend}</div>
+                        <div class="kpi-label">Tendance Mensuelle</div>
+                    </div>
+                    <div class="kpi-item">
+                        <div class="kpi-value">${data.kpis.completion_rate}%</div>
+                        <div class="kpi-label">Taux Completion</div>
+                    </div>
+                    <div class="kpi-item">
+                        <div class="kpi-value">${data.kpis.risky_projects}</div>
+                        <div class="kpi-label">Projets a Risque</div>
+                    </div>
+                    <div class="kpi-item">
+                        <div class="kpi-value">${data.kpis.avg_roi}</div>
+                        <div class="kpi-label">ROI Moyen</div>
+                    </div>
+                    <div class="kpi-item">
+                        <div class="kpi-value">${Math.round(data.kpis.performance_score)}</div>
+                        <div class="kpi-label">Score Performance</div>
+                    </div>
+                    <div class="kpi-item">
+                        <div class="kpi-value">${data.kpis.budget_efficiency}%</div>
+                        <div class="kpi-label">Efficacite Budget</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Erreur KPIs avances:', error);
+            }
+        }
+
+        // Chargement des predictions
+        async function loadPredictions() {
+            try {
+                const response = await fetch('/api/analytics/predictions');
+                const data = await response.json();
+
+                const container = document.getElementById('predictions-data');
+                let html = '';
+
+                if (data.predictions.length > 0) {
+                    data.predictions.forEach(prediction => {
+                        html += `
+                            <div class="prediction-item risk-${prediction.risk_level}">
+                                <div class="risk-indicator ${prediction.risk_level}"></div>
+                                <div class="project-info">
+                                    <div class="project-name">${prediction.projet_nom}</div>
+                                    <div class="project-details">
+                                        Depassement prevu: ${formatNumber(prediction.predicted_overspend)}€
+                                        | Probabilite: ${Math.round(prediction.completion_probability)}%
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html = '<div class="empty-state" style="padding: var(--space-6);"><div class="empty-state-icon"><i class="fas fa-check"></i></div><p>Aucun risque detecte</p></div>';
+                }
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Erreur predictions:', error);
+            }
+        }
+
+        // Chargement de la timeline
+        async function loadTimeline() {
+            try {
+                const response = await fetch('/api/analytics/timeline');
+                const data = await response.json();
+
+                const ctx = document.getElementById('timelineChart').getContext('2d');
+
+                if (timelineChart) timelineChart.destroy();
+
+                timelineChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.timeline.map(item => new Date(item.date).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })),
+                        datasets: [{
+                            label: 'Depenses quotidiennes',
+                            data: data.timeline.map(item => item.amount),
+                            borderColor: '#D97757',
+                            backgroundColor: 'rgba(217, 119, 87, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#D97757'
+                        }, {
+                            label: 'Cumule',
+                            data: data.timeline.map(item => item.cumulative),
+                            borderColor: '#1A1A1A',
+                            backgroundColor: 'transparent',
+                            fill: false,
+                            tension: 0.4,
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 20
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(0,0,0,0.05)'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return formatNumber(value) + '€';
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Erreur timeline:', error);
+            }
+        }
+
+        // Chargement de la heatmap
+        async function loadHeatmap() {
+            try {
+                const response = await fetch('/api/analytics/heatmap');
+                const data = await response.json();
+
+                const container = document.getElementById('heatmap-container');
+
+                let html = '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: var(--space-3);">';
+                const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+                days.forEach(day => {
+                    html += `<div style="text-align: center; font-size: var(--text-xs); color: var(--color-text-tertiary);">${day}</div>`;
+                });
+                html += '</div>';
+
+                html += '<div class="heatmap-grid">';
+                data.heatmap.forEach(cell => {
+                    const opacity = cell.intensity;
+                    const backgroundColor = `rgba(217, 119, 87, ${opacity})`;
+                    const textColor = opacity > 0.5 ? 'white' : 'var(--color-text-tertiary)';
+                    html += `
+                        <div class="heatmap-cell" style="background-color: ${backgroundColor}; color: ${textColor};">
+                            ${cell.value > 0 ? Math.round(cell.value) : ''}
+                        </div>
+                    `;
+                });
+                html += '</div>';
+
+                html += `
+                    <div style="margin-top: var(--space-3); text-align: center;">
+                        <div style="font-size: var(--text-xs); color: var(--color-text-tertiary);">Intensite des depenses par jour/categorie</div>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Erreur heatmap:', error);
+            }
+        }
+
+        // Chargement de la velocite de depenses
+        async function loadSpendingVelocity() {
+            try {
+                const response = await fetch('/api/analytics/spending-velocity');
+                const data = await response.json();
+
+                const container = document.getElementById('spending-velocity');
+
+                const maxAmount = Math.max(...data.daily_velocity.map(d => d.spending));
+                let html = '<div class="velocity-chart">';
+
+                data.daily_velocity.forEach(day => {
+                    const height = (day.spending / maxAmount) * 100;
+                    html += `
+                        <div class="velocity-bar" style="height: ${height}%;">
+                            <div class="velocity-label">${day.day}</div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+
+                html += `
+                    <div class="numbers-grid" style="margin-top: var(--space-4);">
+                        <div class="number-item">
+                            <div class="number-value">${formatNumber(data.weekly_total)}€</div>
+                            <div class="number-label">Total Semaine</div>
+                        </div>
+                        <div class="number-item">
+                            <div class="number-value">${formatNumber(data.avg_daily)}€</div>
+                            <div class="number-label">Moyenne/Jour</div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: var(--space-3);">
+                        <span class="badge ${data.trend === 'acceleration' ? 'badge-danger' : 'badge-success'}">
+                            <i class="fas fa-chart-line"></i>
+                            ${data.trend === 'acceleration' ? 'Acceleration' : 'Deceleration'}
+                        </span>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Erreur velocite:', error);
+            }
+        }
+
+        // Chargement des previsions cash-flow
+        async function loadCashFlowForecast() {
+            try {
+                const response = await fetch('/api/analytics/cash-flow-forecast');
+                const data = await response.json();
+
+                const container = document.getElementById('cash-flow-forecast');
+
+                let html = `
+                    <div class="number-item" style="margin-bottom: var(--space-4);">
+                        <div class="number-value">${formatNumber(data.current_cash)}€</div>
+                        <div class="number-label">Tresorerie Actuelle</div>
+                    </div>
+                `;
+
+                html += '<div class="forecast-timeline">';
+                data.forecast.forEach(month => {
+                    html += `
+                        <div class="forecast-item forecast-${month.runway_status}">
+                            <div class="forecast-month">${month.month}</div>
+                            <div class="forecast-amount">${formatNumber(month.projected_cash)}€</div>
+                            <div class="forecast-status">${month.runway_status}</div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+
+                if (data.runway_alert) {
+                    html += `
+                        <div class="alert alert-danger" style="margin-top: var(--space-4);">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>Alerte: Runway < 6 mois</span>
+                        </div>
+                    `;
+                }
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Erreur cash-flow:', error);
+            }
+        }
+
+        // Chargement de l'efficacite des projets
+        async function loadProjectEfficiency() {
+            try {
+                const response = await fetch('/api/analytics/project-efficiency');
+                const data = await response.json();
+
+                const container = document.getElementById('project-efficiency');
+
+                let html = `
+                    <div class="number-item" style="margin-bottom: var(--space-4);">
+                        <div class="number-value">${Math.round(data.avg_efficiency)}</div>
+                        <div class="number-label">Efficacite Moyenne</div>
+                    </div>
+                    <div class="efficiency-list">
+                `;
+
+                data.projects.forEach(project => {
+                    const scoreClass = project.efficiency_level === 'excellent' ? 'score-excellent' :
+                                     project.efficiency_level === 'good' ? 'score-good' : 'score-warning';
+
+                    html += `
+                        <div class="efficiency-item">
+                            <div class="efficiency-color" style="background: ${project.categorie_couleur}"></div>
+                            <div class="efficiency-info">
+                                <div class="efficiency-name">${project.nom}</div>
+                                <div class="efficiency-progress">${project.spent_ratio}% utilise</div>
+                            </div>
+                            <div class="efficiency-score ${scoreClass}">
+                                ${Math.round(project.efficiency_score)}
+                                <i class="fas fa-star"></i>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Erreur efficacite projets:', error);
+            }
+        }
+
+        async function loadQuickNumbers() {
+            try {
+                const response = await fetch('/api/widgets/quick-numbers');
+                const data = await response.json();
+
+                const container = document.getElementById('quick-numbers');
+                container.innerHTML = `
+                    <div class="number-item">
+                        <div class="number-value">${formatNumber(data.total_budget)}€</div>
+                        <div class="number-label">Budget Total</div>
+                    </div>
+                    <div class="number-item">
+                        <div class="number-value">${formatNumber(data.cash_available)}€</div>
+                        <div class="number-label">Tresorerie</div>
+                    </div>
+                    <div class="number-item">
+                        <div class="number-value">${data.projects_count}</div>
+                        <div class="number-label">Projets</div>
+                    </div>
+                    <div class="number-item">
+                        <div class="number-value">${data.projects_on_track}</div>
+                        <div class="number-label">Sous Controle</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Erreur quick numbers:', error);
+            }
+        }
+
+        async function loadStatusIndicators() {
+            try {
+                const response = await fetch('/api/widgets/status-indicators');
+                const data = await response.json();
+
+                const container = document.getElementById('status-indicators');
+                container.innerHTML = `
+                    <div class="status-indicator status-${data.budget_status.level}">
+                        <span class="status-icon">${data.budget_status.icon}</span>
+                        <span class="status-text">${data.budget_status.message}</span>
+                    </div>
+                    <div class="status-indicator status-${data.cash_status.level}">
+                        <span class="status-icon">${data.cash_status.icon}</span>
+                        <span class="status-text">${data.cash_status.message}</span>
+                    </div>
+                    <div class="status-indicator status-${data.projects_status.level}">
+                        <span class="status-icon">${data.projects_status.icon}</span>
+                        <span class="status-text">${data.projects_status.message}</span>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Erreur status indicators:', error);
+            }
+        }
+
+        async function loadFinancialHealth() {
+            try {
+                const response = await fetch('/api/analytics/financial-health');
+                const data = await response.json();
+
+                const container = document.getElementById('financial-health');
+                container.innerHTML = `
+                    <div style="text-align: center; margin-bottom: var(--space-4);">
+                        <div style="font-size: var(--text-display-lg); font-weight: var(--font-bold); color: var(--color-${getHealthColor(data.level)}); margin-bottom: var(--space-2);">
+                            ${Math.round(data.health_score)}
+                        </div>
+                        <div class="badge badge-${getHealthBadge(data.level)}">
+                            ${getLevelText(data.level)}
+                        </div>
+                    </div>
+                    <ul style="list-style: none; padding: 0; font-size: var(--text-sm);">
+                        ${data.analysis.map(item => `<li style="padding: var(--space-2) 0; border-bottom: 1px solid var(--color-border-light);">${item}</li>`).join('')}
+                    </ul>
+                `;
+            } catch (error) {
+                console.error('Erreur financial health:', error);
+            }
+        }
+
+        async function loadCategoryChart() {
+            try {
+                const response = await fetch('/api/widgets/mini-charts');
+                const data = await response.json();
+
+                if (data.category_pie.length > 0) {
+                    const ctx = document.getElementById('categoryChart').getContext('2d');
+
+                    if (categoryChart) categoryChart.destroy();
+
+                    categoryChart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: data.category_pie.map(item => item.name),
+                            datasets: [{
+                                data: data.category_pie.map(item => item.value),
+                                backgroundColor: data.category_pie.map(item => item.color),
+                                borderWidth: 0,
+                                hoverOffset: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            cutout: '65%',
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'bottom',
+                                    labels: {
+                                        usePointStyle: true,
+                                        padding: 12,
+                                        font: {
+                                            size: 11
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Erreur category chart:', error);
+            }
+        }
+
+        async function loadTrending() {
+            try {
+                const response = await fetch('/api/widgets/trending');
+                const data = await response.json();
+
+                const container = document.getElementById('trending-data');
+                let html = '';
+
+                Object.entries(data.trends).forEach(([key, trend]) => {
+                    html += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border-light);">
+                            <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">${trend.description}</span>
+                            <span style="display: flex; align-items: center; gap: var(--space-2); font-weight: var(--font-semibold); color: ${trend.color};">
+                                ${trend.value}
+                                <i class="fas fa-arrow-${trend.direction === 'up' ? 'up' : 'down'}"></i>
+                            </span>
+                        </div>
+                    `;
+                });
+
+                if (data.top_performer) {
+                    html += `
+                        <div style="margin-top: var(--space-4); padding: var(--space-4); background: var(--color-slate-50); border-radius: var(--radius-lg);">
+                            <div style="font-size: var(--text-xs); color: var(--color-text-tertiary); margin-bottom: var(--space-2); text-transform: uppercase; letter-spacing: 0.05em;">Meilleur Projet</div>
+                            <div style="display: flex; align-items: center; gap: var(--space-3);">
+                                <div style="width: 12px; height: 12px; border-radius: var(--radius-full); background: ${data.top_performer.categorie_couleur}"></div>
+                                <span style="flex: 1; font-weight: var(--font-medium);">${data.top_performer.nom}</span>
+                                <span style="font-weight: var(--font-bold); color: var(--color-primary);">${data.top_performer.efficiency}%</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Erreur trending:', error);
+            }
+        }
+
+        async function loadAlertsData() {
+            try {
+                const response = await fetch('/api/widgets/alerts-summary');
+                const data = await response.json();
+
+                const container = document.getElementById('alerts-summary');
+                let html = `
+                    <div class="numbers-grid" style="margin-bottom: var(--space-4);">
+                        <div class="number-item" style="background: var(--color-danger-light);">
+                            <div class="number-value" style="color: var(--color-danger);">${data.alerts_count}</div>
+                            <div class="number-label">Alertes</div>
+                        </div>
+                        <div class="number-item" style="background: var(--color-info-light);">
+                            <div class="number-value" style="color: var(--color-info);">${data.opportunities_count}</div>
+                            <div class="number-label">Opportunites</div>
+                        </div>
+                    </div>
+                `;
+
+                if (data.alerts.length > 0) {
+                    data.alerts.forEach(alert => {
+                        const bgClass = alert.severity === 'high' ? 'alert-danger' :
+                                       alert.severity === 'medium' ? 'alert-warning' : 'alert-info';
+
+                        html += `
+                            <div class="alert ${bgClass}" style="margin-bottom: var(--space-3);">
+                                <div class="alert-content">
+                                    <div class="alert-title">${alert.message}</div>
+                                    <div class="alert-message">${alert.action}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += '<div class="empty-state" style="padding: var(--space-6);"><p style="color: var(--color-text-tertiary);">Aucune alerte</p></div>';
+                }
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Erreur alerts:', error);
+            }
+        }
+
+        // Export PDF
+        async function exportToPDF() {
+            try {
+                const response = await fetch('/api/export/pdf');
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `analytics_report_${new Date().toISOString().split('T')[0]}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (error) {
+                console.error('Erreur export PDF:', error);
+                alert('Erreur lors de l\'export');
+            }
+        }
+
+        // Fonctions utilitaires
+        function formatNumber(num) {
+            return new Intl.NumberFormat('fr-FR').format(Math.round(num));
+        }
+
+        function getLevelText(level) {
+            const levels = {
+                'excellent': 'Excellent',
+                'good': 'Bon',
+                'warning': 'Attention',
+                'critical': 'Critique'
+            };
+            return levels[level] || level;
+        }
+
+        function getHealthColor(level) {
+            const colors = {
+                'excellent': 'success',
+                'good': 'primary',
+                'warning': 'warning',
+                'critical': 'danger'
+            };
+            return colors[level] || 'text-secondary';
+        }
+
+        function getHealthBadge(level) {
+            const badges = {
+                'excellent': 'success',
+                'good': 'primary',
+                'warning': 'warning',
+                'critical': 'danger'
+            };
+            return badges[level] || 'info';
+        }
+
+        function refreshDashboard() {
+            const btn = document.querySelector('.btn-primary i');
+            btn.classList.add('animate-spin');
+
+            loadDashboard().then(() => {
+                btn.classList.remove('animate-spin');
+            });
+        }
+
+        // Chargement initial
+        document.addEventListener('DOMContentLoaded', loadDashboard);
+
+        // Auto-refresh toutes les 30 secondes
+        setInterval(loadDashboard, 30000);
+    </script>
+</body>
+</html>

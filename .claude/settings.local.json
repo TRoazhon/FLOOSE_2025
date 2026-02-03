@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(python:*)",
+      "Bash(curl:*)",
+      "Bash(grep:*)",
+      "Bash(pip install:*)",
+      "Bash(find:*)",
+      "Bash(pytest:*)",
+      "Bash(rm:*)",
+      "Bash(timeout:*)",
+      "Bash(/opt/local/bin/python3.13 -m pip list:*)",
+      "Bash(/opt/local/bin/python3.13 -m pip install:*)",
+      "Bash(/opt/local/bin/python3.13:*)",
+      "Bash(wc:*)",
+      "Bash(du:*)",
+      "WebFetch(domain:www.anthropic.com)",
+      "Bash(tree:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill -9)",
+      "Bash(pgrep:*)",
+      "Bash(pip3 install:*)"
+    ],
+    "deny": []
+  }
+}

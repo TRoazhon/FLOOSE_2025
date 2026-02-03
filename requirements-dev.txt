@@ -1,0 +1,12 @@
+# Development dependencies
+-r requirements.txt
+
+# Testing
+pytest==7.4.2
+pytest-flask==1.2.0
+pytest-cov==4.1.0
+
+# Code quality (optional)
+# flake8==6.1.0
+# mypy==1.5.1
+# bandit==1.7.5
